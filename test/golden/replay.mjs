@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
-import { appleOptions } from "../../dist/apple.js";
 import { UPSTREAM_COMMIT } from "../../dist/backend.js";
 
 const directory = dirname(fileURLToPath(import.meta.url));
@@ -25,7 +25,8 @@ if (!existsSync(cli)) {
 
 const bins = { container: join(directory, "fake-container.mjs"), docker: join(directory, "fake-docker.mjs") };
 const project = "golden";
-const name = appleOptions({ project }).name;
+// Pinned host-name formula: a change to name derivation must fail the replay, not silently follow it.
+const name = `lfm-${project}-${createHash("sha256").update(project).digest("hex").slice(0, 8)}`;
 const source = await realpath(join(directory, "fixtures", "source"));
 const archive = await realpath(join(directory, "fixtures", "sandbox.oci.tar"));
 const appleImage = "docker.io/library/layerfs-mcp-apple:local";
@@ -302,12 +303,14 @@ async function replay(scenario) {
       : [];
     const tokens = [[process.execPath, "<NODE>"], [work, "<WORK>"], [source, "<SOURCE>"], [archive, "<ARCHIVE>"], [root, "<ROOT>"]];
     const clean = value => tokens.reduce((text, [from, to]) => text.split(from).join(to), value);
+    const profile = join(work, "config", "projects", `${project}.json`);
     return {
       argv: ["dist/cli.js", ...scenario.args].map(clean),
       exitCode: result.exitCode,
       stdout: clean(result.stdout),
       stderr: clean(result.stderr),
       calls: calls.map(call => ({ bin: call.bin, args: call.args.map(clean) })),
+      profileJson: existsSync(profile) ? JSON.parse(clean(await readFile(profile, "utf8"))) : null,
     };
   } finally {
     await rm(work, { recursive: true, force: true });

@@ -41,5 +41,14 @@
         "<ROOT>/"
       ]
     }
-  ]
+  ],
+  "profileJson": {
+    "version": 1,
+    "backend": "apple",
+    "project": "golden",
+    "name": "lfm-golden-dd56de41",
+    "image": "docker.io/library/layerfs-mcp-apple:0.1.0",
+    "cpus": "2",
+    "memory": "2G"
+  }
 }

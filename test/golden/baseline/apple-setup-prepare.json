@@ -44,5 +44,14 @@
         "lfm-golden-dd56de41"
       ]
     }
-  ]
+  ],
+  "profileJson": {
+    "version": 1,
+    "backend": "apple",
+    "project": "golden",
+    "name": "lfm-golden-dd56de41",
+    "image": "docker.io/library/layerfs-mcp-apple:local",
+    "cpus": "2",
+    "memory": "2G"
+  }
 }

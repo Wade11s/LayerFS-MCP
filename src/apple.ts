@@ -68,9 +68,12 @@ async function findVM(options: RuntimeSelection): Promise<any | undefined> {
   return findOwned({
     listed: async () => {
       const all = JSON.parse(await command(["list", "--all", "--format", "json"]));
-      return all.some((vm: any) => vm.id === options.name || vm.configuration?.id === options.name);
+      return all.find((vm: any) => vm.id === options.name || vm.configuration?.id === options.name) !== undefined;
     },
-    inspect: async () => JSON.parse(await command(["inspect", options.name]))[0],
+    inspect: async () => {
+      const [vm] = JSON.parse(await command(["inspect", options.name]));
+      return vm;
+    },
     read: readAppleRuntime,
     policy: applePolicy(options),
   });

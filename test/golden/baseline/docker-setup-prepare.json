@@ -45,5 +45,14 @@
         "lfm-golden-dd56de41"
       ]
     }
-  ]
+  ],
+  "profileJson": {
+    "version": 1,
+    "backend": "docker",
+    "project": "golden",
+    "name": "lfm-golden-dd56de41",
+    "image": "example/runtime:local",
+    "cpus": "2",
+    "memory": "2G"
+  }
 }

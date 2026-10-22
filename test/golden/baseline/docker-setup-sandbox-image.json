@@ -162,5 +162,6 @@
         "const fs=require('node:fs'); for(const p of ['/layerfs-home','/layerfs-store/global']) { fs.mkdirSync(p,{recursive:true,mode:0o700}); fs.chmodSync(p,0o700); }"
       ]
     }
-  ]
+  ],
+  "profileJson": null
 }

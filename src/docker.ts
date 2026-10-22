@@ -64,7 +64,10 @@ export function assertDockerOwnership(record: unknown, options: { name: string; 
 async function find(options: Options): Promise<any | undefined> {
   return findOwned({
     listed: async () => (await command(["ps", "-aq", "--filter", `name=^/${options.name}$`])).trim() !== "",
-    inspect: async () => JSON.parse(await command(["inspect", options.name]))[0],
+    inspect: async () => {
+      const [record] = JSON.parse(await command(["inspect", options.name]));
+      return record;
+    },
     read: readDockerRuntime,
     policy: dockerPolicy(options),
   });
