@@ -1,0 +1,13 @@
+{
+  "argv": [
+    "dist/cli.js",
+    "update",
+    "--project",
+    "golden"
+  ],
+  "exitCode": 0,
+  "stdout": "{\"project\":\"golden\",\"state\":\"not-configured\"}\n",
+  "stderr": "",
+  "calls": [],
+  "profileJson": null
+}

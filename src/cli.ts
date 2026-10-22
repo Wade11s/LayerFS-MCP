@@ -9,7 +9,7 @@ import { ManagedBackend } from "./managed.js";
 import { isHostCommand, runLegacyCommand } from "./driver.js";
 import { capture } from "./host-exec.js";
 import { VERSION } from "./package-info.js";
-import { resolveProfile, readProfile, helperArguments, withRuntimeLock } from "./runtime.js";
+import { resolveProfile, readProfile, helperArguments, withRuntimeLock, updateProfile } from "./runtime.js";
 
 async function main(): Promise<void> {
   const command = process.argv[2];
@@ -27,7 +27,7 @@ async function main(): Promise<void> {
   } });
   if (values.help) {
     console.log(`LayerFS-MCP ${VERSION}
-Usage: layerfs-mcp [serve|setup|init|status|stop|doctor] [options]
+Usage: layerfs-mcp [serve|setup|init|update|status|stop|doctor] [options]
   --backend apple-container|docker|native  apple alias accepted; saved per project; default Apple Container on Mac
   --source PATH                read-only import source; init is explicit
   --image REF                  runtime image; default is built automatically when absent
@@ -45,6 +45,7 @@ Usage: layerfs-mcp [serve|setup|init|status|stop|doctor] [options]
   --disable-exec              hide command/process execution methods
 HTTP authentication: set LAYERFS_MCP_TOKEN (required for non-loopback binds).
 serve prepares the runtime automatically; setup is optional prewarming.
+update rewrites saved project settings (image, source, resources); the runtime is untouched.
 MCP connects immediately; layerfs_status reports preparing/ready/failed.
 init imports the configured source (or example seed). serve never imports data.
 Profiles: LAYERFS_MCP_CONFIG_DIR or ~/.config/layerfs-mcp.
@@ -53,7 +54,7 @@ Legacy apple subcommands remain available. See README.`);
     return;
   }
   const action = positionals[0] || "serve";
-  if (positionals.length > 1 || !["serve", "setup", "init", "status", "stop", "doctor"].includes(action)) throw new Error("Unknown command; use --help");
+  if (positionals.length > 1 || !["serve", "setup", "init", "update", "status", "stop", "doctor"].includes(action)) throw new Error("Unknown command; use --help");
   const env = { ...process.env };
   for (const [flag, variable] of Object.entries({ transport: "LAYERFS_MCP_TRANSPORT", project: "LAYERFS_MCP_PROJECT", "sdk-path": "LAYERFS_SDK_PATH", "store-path": "LAYERFS_STORE_PATH", host: "LAYERFS_MCP_HOST", port: "LAYERFS_MCP_PORT" })) {
     if (typeof values[flag as keyof typeof values] === "string") env[variable] = values[flag as keyof typeof values] as string;
@@ -69,7 +70,7 @@ Legacy apple subcommands remain available. See README.`);
   let backend: Backend;
   if (selected === "native") {
     backend = new LayerFSBackend(config);
-    if (action === "setup" || action === "stop") throw new Error("Native mode uses an existing Linux deployment; manage its lifecycle externally");
+    if (action === "setup" || action === "stop" || action === "update") throw new Error("Native mode uses an existing Linux deployment; manage its lifecycle externally");
     if (action === "init") {
       if (!values.source) throw new Error("Native init requires --source");
       try { console.log(JSON.stringify(await backend.invoke("project.init", [values.source]), null, 2)); }
@@ -86,6 +87,10 @@ Legacy apple subcommands remain available. See README.`);
       const result = await withRuntimeLock(`runtime:${profile.backend}:${profile.name}`, controller.signal, () => capture(process.execPath, args));
       if (action === "stop") console.log(JSON.stringify({ project: profile.project, backend: profile.backend, state: "stopped", volumesRetained: true }));
       else process.stdout.write(result);
+      return;
+    }
+    if (action === "update") {
+      console.log(JSON.stringify({ project: config.project, ...await updateProfile({ ...values, backend: selected }, config.project, controller.signal) }));
       return;
     }
     const profile = await resolveProfile({ ...values, backend: selected }, config.project, controller.signal);

@@ -69,33 +69,61 @@ export async function readProfile(project: string): Promise<RuntimeProfile | und
   return profile;
 }
 
+async function writeProfile(profile: RuntimeProfile): Promise<void> {
+  const path = profilePath(profile.project);
+  await mkdir(join(configDirectory(), "projects"), { recursive: true, mode: 0o700 });
+  const temporary = `${path}.${randomUUID()}.tmp`;
+  await writeFile(temporary, JSON.stringify(profile, null, 2) + "\n", { mode: 0o600, flag: "wx" });
+  await rename(temporary, path);
+}
+
+async function buildProfile(input: RuntimeInput, project: string, previous: RuntimeProfile | undefined): Promise<RuntimeProfile> {
+  const backend = input.backend || previous?.backend || (process.platform === "darwin" ? "apple" : "docker");
+  if (backend !== "apple" && backend !== "docker") throw new Error("Backend must be apple, docker or native");
+  assertHostForProfile(backend);
+  if (previous && backend !== previous.backend) throw new Error(`Project ${project} already uses ${previous.backend}; use a different project name for ${backend}. Stores are not migrated automatically.`);
+  const selected: RuntimeInput = { ...(previous || {}), ...Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined)), project,
+    image: input.image || previous?.image || defaultImage(backend) };
+  if (selected.source) selected.source = await realpath(String(selected.source));
+  if (selected["sandbox-archive"]) selected["sandbox-archive"] = await realpath(String(selected["sandbox-archive"]));
+  const options = parseSelection({ ...selected, "sandbox-archive": selected["sandbox-archive"] || previous?.archive,
+    "sandbox-image": selected["sandbox-image"] || previous?.sandboxImage }, defaultImage(backend));
+  return profileSchema.parse(Object.fromEntries(Object.entries({ version: 1, backend, ...options }).filter(([, value]) => value !== undefined)));
+}
+
 export async function resolveProfile(input: RuntimeInput, project: string, signal: AbortSignal): Promise<RuntimeProfile> {
   return withRuntimeLock(`profile:${project}`, signal, async () => {
     const previous = await readProfile(project);
-    const backend = input.backend || previous?.backend || (process.platform === "darwin" ? "apple" : "docker");
-    if (backend !== "apple" && backend !== "docker") throw new Error("Backend must be apple, docker or native");
-    assertHostForProfile(backend);
-    if (previous && backend !== previous.backend) throw new Error(`Project ${project} already uses ${previous.backend}; use a different project name for ${backend}. Stores are not migrated automatically.`);
-    const selected: RuntimeInput = { ...(previous || {}), ...Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined)), project,
-      image: input.image || previous?.image || defaultImage(backend) };
-    if (selected.source) selected.source = await realpath(String(selected.source));
-    if (selected["sandbox-archive"]) selected["sandbox-archive"] = await realpath(String(selected["sandbox-archive"]));
-    const options = parseSelection({ ...selected, "sandbox-archive": selected["sandbox-archive"] || previous?.archive,
-      "sandbox-image": selected["sandbox-image"] || previous?.sandboxImage }, defaultImage(backend));
-    const profile = profileSchema.parse(Object.fromEntries(Object.entries({ version: 1, backend, ...options }).filter(([, value]) => value !== undefined)));
-    assertCreationFlags(backend, input, profile);
+    const profile = await buildProfile(input, project, previous);
+    assertCreationFlags(profile.backend, input, profile);
     if (previous) {
       for (const key of CREATION_FIELDS) {
         if (previous[key] !== profile[key]) throw new Error(`Project ${project} is already configured with a different ${key}; use a new project or explicitly manage its existing runtime configuration.`);
       }
       return previous;
     }
-    const path = profilePath(project);
-    await mkdir(join(configDirectory(), "projects"), { recursive: true, mode: 0o700 });
-    const temporary = `${path}.${randomUUID()}.tmp`;
-    await writeFile(temporary, JSON.stringify(profile, null, 2) + "\n", { mode: 0o600, flag: "wx" });
-    await rename(temporary, path);
+    await writeProfile(profile);
     return profile;
+  });
+}
+
+export type ProfileUpdate =
+  | { state: "not-configured" }
+  | { state: "unchanged" }
+  | { state: "updated"; changed: string[] };
+
+export async function updateProfile(input: RuntimeInput, project: string, signal: AbortSignal): Promise<ProfileUpdate> {
+  return withRuntimeLock(`profile:${project}`, signal, async () => {
+    const previous = await readProfile(project);
+    if (!previous) return { state: "not-configured" };
+    const profile = await buildProfile(input, project, previous);
+    // cpus/memory are saved for every backend and never reach a docker run; --sandbox-archive stays creation-gated
+    // because the docker setup CLI cannot parse it and helperArguments would replay it on the next setup.
+    assertCreationFlags(profile.backend, { ...input, cpus: undefined, memory: undefined }, profile);
+    const changed = CREATION_FIELDS.filter(field => previous[field] !== profile[field]).sort();
+    if (!changed.length) return { state: "unchanged" };
+    await writeProfile(profile);
+    return { state: "updated", changed };
   });
 }
 

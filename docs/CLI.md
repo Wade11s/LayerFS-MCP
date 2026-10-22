@@ -66,7 +66,7 @@ layerfs-mcp stop --project website
 layerfs-mcp serve --project website --read-only
 ```
 
-同一个项目名不能通过换 `--backend` 自动迁移 Store。已经保存的镜像、source、VM 名称和资源参数发生变化时会明确拒绝；使用新项目，或显式管理已有运行环境和配置。旧版手动创建的 Apple 项目可用匹配其镜像和资源的参数登记，例如原默认示例可用 `serve --backend apple-container --project default --image docker.io/library/layerfs-mcp-apple:local`。
+同一个项目名不能通过换 `--backend` 自动迁移 Store。已经保存的镜像、source、VM 名称和资源参数发生变化时会明确拒绝；使用新项目，或显式管理已有运行环境和配置。需要显式改写已保存的配置时用 `update --project <name>`，它只重写配置文件，不重跑 setup、不删除卷，后端自己的漂移拒绝在下次 `serve`/`setup` 时照旧生效。旧版手动创建的 Apple 项目可用匹配其镜像和资源的参数登记，例如原默认示例可用 `serve --backend apple-container --project default --image docker.io/library/layerfs-mcp-apple:local`。
 
 `stop` 保留数据卷。Apple 停止整个项目 VM，会终止其 Sandbox/后台进程；Docker 停止项目的 MCP 控制容器，Sandbox/后台进程仍由 LayerFS 管理，需要时先使用相应 Workspace/process 工具提交、卸载或取消。再次 `serve` 会启动同一环境。客户端退出只关闭它自己的 MCP 连接。每个容器内 MCP 进程使用独立临时目录，防止重启后 PID 复用造成临时 Overlay 目录冲突。
 
