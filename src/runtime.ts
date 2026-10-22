@@ -18,7 +18,7 @@ const profileSchema = z.object({
 }).strict();
 export type RuntimeProfile = z.infer<typeof profileSchema>;
 export type HostBackend = RuntimeProfile["backend"];
-export const configDirectory = () => resolve(process.env.LAYERFS_MCP_CONFIG_DIR || join(homedir(), ".config", "layerfs-mcp"));
+const configDirectory = () => resolve(process.env.LAYERFS_MCP_CONFIG_DIR || join(homedir(), ".config", "layerfs-mcp"));
 export const runtimeError = (code: string, message: string, detail?: unknown) => Object.assign(new Error(message), { code, detail });
 
 type CreationField = Exclude<keyof RuntimeProfile, "version" | "backend" | "project">;

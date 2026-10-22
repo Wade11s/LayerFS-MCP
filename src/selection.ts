@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { PROJECT_NAME_PATTERN } from "./config.js";
 
 export type RuntimeInput = Record<string, unknown>;
 
@@ -16,7 +17,7 @@ export interface RuntimeSelection {
 export type RuntimeIdentity = Pick<RuntimeSelection, "project" | "name" | "image" | "source" | "sandboxImage">;
 
 export function assertProjectName(project: string): void {
-  if (!/^[a-z0-9](?:[a-z0-9_.-]{0,61}[a-z0-9])?$/.test(project)) throw new Error("Invalid project name");
+  if (!PROJECT_NAME_PATTERN.test(project)) throw new Error("Invalid project name");
 }
 
 /** Order is the contract: project, name, cpus/memory, image, then the optional extra paths. */
