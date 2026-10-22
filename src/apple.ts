@@ -3,6 +3,7 @@ import { promisify, parseArgs } from "node:util";
 import { createHash } from "node:crypto";
 import { realpath, stat } from "node:fs/promises";
 import { UPSTREAM_COMMIT } from "./backend.js";
+import { PROJECT_NAME_PATTERN } from "./config.js";
 import { isolatedEntry } from "./process.js";
 
 const exec = promisify(execFile);
@@ -12,7 +13,7 @@ interface AppleOptions { project: string; name: string; image: string; source?: 
 
 export function appleOptions(input: Record<string, unknown>): AppleOptions {
   const project = String(input.project || process.env.LAYERFS_MCP_PROJECT || "default");
-  if (!/^[a-z0-9](?:[a-z0-9_.-]{0,61}[a-z0-9])?$/.test(project)) throw new Error("Invalid project name");
+  if (!PROJECT_NAME_PATTERN.test(project)) throw new Error("Invalid project name");
   const hash = createHash("sha256").update(project).digest("hex").slice(0, 8);
   const name = String(input.name || `lfm-${project.slice(0, 35)}-${hash}`);
   if (!/^[a-z0-9][a-z0-9_.-]{0,62}$/.test(name)) throw new Error("Invalid Apple VM name");
