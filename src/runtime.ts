@@ -117,6 +117,10 @@ export async function updateProfile(input: RuntimeInput, project: string, signal
     const previous = await readProfile(project);
     if (!previous) return { state: "not-configured" };
     const profile = await buildProfile(input, project, previous);
+    // Renaming would silently move runtime identity: the next setup creates a second
+    // container and orphans the first one with its volumes. resolveProfile rejects the
+    // same change; update must not become the quiet path around it.
+    if (profile.name !== previous.name) throw new Error(`Project ${project} is already configured with a different name; use a new project or explicitly manage its existing runtime configuration.`);
     // cpus/memory are saved for every backend and never reach a docker run; --sandbox-archive stays creation-gated
     // because the docker setup CLI cannot parse it and helperArguments would replay it on the next setup.
     assertCreationFlags(profile.backend, { ...input, cpus: undefined, memory: undefined }, profile);

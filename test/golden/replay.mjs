@@ -293,6 +293,12 @@ const scenarios = [
     script: [],
   },
   {
+    name: "docker-update-name-reject",
+    prepare: "docker",
+    args: ["update", "--project", project, "--name", "renamed-runtime"],
+    script: [],
+  },
+  {
     backend: "docker",
     name: "docker-update-not-configured",
     args: ["update", "--project", project],
