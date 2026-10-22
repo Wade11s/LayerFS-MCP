@@ -87,3 +87,14 @@ test("profiles persist independently of package location and locks serialize pro
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("close completes even when the runtime connection never does", async () => {
+  let entered;
+  const stuck = new Promise(resolve => { entered = resolve; });
+  const backend = new ManagedBackend(profile, async () => {}, () => { entered(); return new Promise(() => {}); });
+  backend.start();
+  await stuck;
+  const finished = await Promise.race([backend.close().then(() => true), new Promise(resolve => setTimeout(() => resolve(false), 3000))]);
+  assert.equal(finished, true, "close() must complete even if connect never settles");
+  assert.equal((await backend.diagnostics()).runtimeState, "closed");
+});
