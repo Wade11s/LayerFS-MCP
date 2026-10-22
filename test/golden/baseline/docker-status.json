@@ -1,0 +1,41 @@
+{
+  "argv": [
+    "dist/cli.js",
+    "docker",
+    "status",
+    "--project",
+    "golden"
+  ],
+  "exitCode": 0,
+  "stdout": "{\n  \"backend\": \"docker\",\n  \"project\": \"golden\",\n  \"name\": \"lfm-golden-dd56de41\",\n  \"state\": \"running\",\n  \"diagnostics\": {\n    \"ok\": true,\n    \"platform\": \"linux\",\n    \"missing\": [],\n    \"checks\": {}\n  }\n}\n",
+  "stderr": "",
+  "calls": [
+    {
+      "bin": "docker",
+      "args": [
+        "ps",
+        "-aq",
+        "--filter",
+        "name=^/lfm-golden-dd56de41$"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "inspect",
+        "lfm-golden-dd56de41"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "exec",
+        "lfm-golden-dd56de41",
+        "node",
+        "/app/dist/cli.js",
+        "doctor"
+      ]
+    }
+  ],
+  "profileJson": null
+}

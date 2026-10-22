@@ -1,0 +1,38 @@
+{
+  "argv": [
+    "dist/cli.js",
+    "apple",
+    "stop",
+    "--project",
+    "golden"
+  ],
+  "exitCode": 0,
+  "stdout": "Apple runtime stopped; state volume retained: lfm-golden-dd56de41-state\n",
+  "stderr": "",
+  "calls": [
+    {
+      "bin": "container",
+      "args": [
+        "list",
+        "--all",
+        "--format",
+        "json"
+      ]
+    },
+    {
+      "bin": "container",
+      "args": [
+        "inspect",
+        "lfm-golden-dd56de41"
+      ]
+    },
+    {
+      "bin": "container",
+      "args": [
+        "stop",
+        "lfm-golden-dd56de41"
+      ]
+    }
+  ],
+  "profileJson": null
+}

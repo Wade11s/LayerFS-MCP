@@ -1,0 +1,58 @@
+{
+  "argv": [
+    "dist/cli.js",
+    "setup",
+    "--project",
+    "golden",
+    "--backend",
+    "docker",
+    "--image",
+    "example/runtime:local"
+  ],
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "LayerFS-MCP: Existing Docker runtime has different image/source settings: {\"existing\":{\"image\":\"other/runtime:old\"},\"requested\":{\"image\":\"example/runtime:local\"}}; use matching settings or a new project\nLayerFS-MCP runtime preparation failed: <NODE> <ROOT>/dist/cli.js failed (1)\nLayerFS-MCP: <NODE> <ROOT>/dist/cli.js failed (1)\n",
+  "calls": [
+    {
+      "bin": "docker",
+      "args": [
+        "info",
+        "--format",
+        "{{.OSType}}"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "image",
+        "inspect",
+        "example/runtime:local"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "ps",
+        "-aq",
+        "--filter",
+        "name=^/lfm-golden-dd56de41$"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "inspect",
+        "lfm-golden-dd56de41"
+      ]
+    }
+  ],
+  "profileJson": {
+    "version": 1,
+    "backend": "docker",
+    "project": "golden",
+    "name": "lfm-golden-dd56de41",
+    "image": "example/runtime:local",
+    "cpus": "2",
+    "memory": "2G"
+  }
+}

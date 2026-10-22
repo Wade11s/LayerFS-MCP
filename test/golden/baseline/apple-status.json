@@ -1,0 +1,41 @@
+{
+  "argv": [
+    "dist/cli.js",
+    "apple",
+    "status",
+    "--project",
+    "golden"
+  ],
+  "exitCode": 0,
+  "stdout": "{\n  \"backend\": \"apple\",\n  \"runtime\": \"apple-container\",\n  \"project\": \"golden\",\n  \"name\": \"lfm-golden-dd56de41\",\n  \"state\": \"running\",\n  \"diagnostics\": {\n    \"ok\": true,\n    \"storePlatformSupported\": true,\n    \"missing\": []\n  }\n}\n",
+  "stderr": "",
+  "calls": [
+    {
+      "bin": "container",
+      "args": [
+        "list",
+        "--all",
+        "--format",
+        "json"
+      ]
+    },
+    {
+      "bin": "container",
+      "args": [
+        "inspect",
+        "lfm-golden-dd56de41"
+      ]
+    },
+    {
+      "bin": "container",
+      "args": [
+        "exec",
+        "lfm-golden-dd56de41",
+        "node",
+        "/opt/layerfs/apple/run.mjs",
+        "doctor"
+      ]
+    }
+  ],
+  "profileJson": null
+}

@@ -1,55 +1,85 @@
 import { execFile, spawn } from "node:child_process";
 import { promisify, parseArgs } from "node:util";
-import { createHash } from "node:crypto";
 import { realpath, stat } from "node:fs/promises";
 import { UPSTREAM_COMMIT } from "./backend.js";
-import { PROJECT_NAME_PATTERN } from "./config.js";
+import { APPLE_FLAG } from "./driver-flags.js";
+import type { RuntimeDriver } from "./driver.js";
+import { run } from "./host-exec.js";
+import { assertOwned, decideAdopt, findOwned, LABEL, type OwnedRuntime, type OwnershipPolicy, type VolumeLabels } from "./ownership.js";
 import { isolatedEntry } from "./process.js";
+import { parseSelection, type RuntimeSelection } from "./selection.js";
 
 const exec = promisify(execFile);
 const OWNER = "layerfs-mcp.apple.v1";
-const bin = process.env.LAYERFS_CONTAINER_BIN || "container";
-interface AppleOptions { project: string; name: string; image: string; source?: string; archive?: string; sandboxImage?: string; cpus: string; memory: string }
+const LEGACY_APPLE_IMAGE = "docker.io/library/layerfs-mcp-apple:local";
+const containerBin = () => process.env.LAYERFS_CONTAINER_BIN || "container";
+const bin = containerBin();
 
-export function appleOptions(input: Record<string, unknown>): AppleOptions {
-  const project = String(input.project || process.env.LAYERFS_MCP_PROJECT || "default");
-  if (!PROJECT_NAME_PATTERN.test(project)) throw new Error("Invalid project name");
-  const hash = createHash("sha256").update(project).digest("hex").slice(0, 8);
-  const name = String(input.name || `lfm-${project.slice(0, 35)}-${hash}`);
-  if (!/^[a-z0-9][a-z0-9_.-]{0,62}$/.test(name)) throw new Error("Invalid Apple VM name");
-  const cpus = String(input.cpus || "2");
-  const memory = String(input.memory || "2G");
-  if (!/^[1-9][0-9]?$/.test(cpus) || !/^[1-9][0-9]*(?:[KMGTP])?$/i.test(memory)) throw new Error("Invalid VM resource selection");
-  const image = String(input.image || "docker.io/library/layerfs-mcp-apple:local");
-  if (!image || /\s/.test(image) || image.startsWith("-")) throw new Error("Invalid runtime image");
-  return { project, name, image, cpus, memory,
-    source: input.source ? String(input.source) : undefined,
-    archive: input["sandbox-archive"] ? String(input["sandbox-archive"]) : undefined,
-    sandboxImage: input["sandbox-image"] ? String(input["sandbox-image"]) : undefined };
+export const appleDriver: RuntimeDriver = {
+  backend: "apple",
+  engine: () => ({
+    bin: containerBin(),
+    ensure: async signal => { await run(containerBin(), ["system", "start"], signal); },
+    imageBuildArgs: image => ["build", "--target", "apple-runtime", "-t", image, "--cpus", "2", "--memory", "2G"],
+  }),
+};
+
+export function appleOptions(input: Record<string, unknown>): RuntimeSelection {
+  return parseSelection(input, LEGACY_APPLE_IMAGE);
 }
 
-export function assertAppleOwnership(vm: any, options: Pick<AppleOptions, "name" | "project">): void {
+function applePolicy(options: Pick<RuntimeSelection, "name" | "project">): OwnershipPolicy {
+  return {
+    expectedName: options.name,
+    expectedProject: options.project,
+    owner: OWNER,
+    upstream: UPSTREAM_COMMIT,
+    requiredVolumes: [{ destination: "/state", name: `${options.name}-state` }],
+    allowedDestinations: ["/state", "/source", "/input/sandbox.oci.tar"],
+    messages: {
+      notOwned: "Refusing to use a VM not owned by this LayerFS-MCP project",
+      wrongVolume: "VM has the wrong state volume",
+      unexpectedMount: "VM has unexpected host mounts",
+    },
+  };
+}
+
+function readAppleRuntime(vm: any): OwnedRuntime {
   const cfg = vm?.configuration;
-  if (vm?.id !== options.name || cfg?.labels?.["io.layerfs-mcp.owner"] !== OWNER
-    || cfg?.labels?.["io.layerfs-mcp.project"] !== options.project
-    || cfg?.labels?.["io.layerfs-mcp.upstream"] !== UPSTREAM_COMMIT) throw new Error("Refusing to use a VM not owned by this LayerFS-MCP project");
-  if (!cfg.mounts?.some((mount: any) => mount.destination === "/state" && mount.type?.volume?.name === `${options.name}-state`)) throw new Error("VM has the wrong state volume");
-  if (cfg.mounts.some((mount: any) => !["/state", "/source", "/input/sandbox.oci.tar"].includes(mount.destination))) throw new Error("VM has unexpected host mounts");
+  const mounts: any[] = cfg?.mounts ?? [];
+  return {
+    name: vm?.id,
+    labels: { owner: cfg?.labels?.[LABEL.owner], project: cfg?.labels?.[LABEL.project], upstream: cfg?.labels?.[LABEL.upstream] },
+    destinations: mounts.map(mount => mount.destination),
+    volumes: mounts.filter(mount => mount.type?.volume?.name).map(mount => ({ destination: mount.destination, name: mount.type.volume.name })),
+  };
+}
+
+export function assertAppleOwnership(vm: unknown, options: { name: string; project: string }): void {
+  assertOwned(readAppleRuntime(vm), applePolicy(options));
 }
 
 async function command(args: string[]): Promise<string> {
   const result = await exec(bin, args, { maxBuffer: 8 * 1024 * 1024 });
   return result.stdout;
 }
-async function findVM(options: AppleOptions): Promise<any | undefined> {
-  const all = JSON.parse(await command(["list", "--all", "--format", "json"]));
-  const item = all.find((vm: any) => vm.id === options.name || vm.configuration?.id === options.name);
-  if (!item) return undefined;
-  const [vm] = JSON.parse(await command(["inspect", options.name]));
-  assertAppleOwnership(vm, options);
-  return vm;
+
+async function findVM(options: RuntimeSelection): Promise<any | undefined> {
+  return findOwned({
+    listed: async () => {
+      const all = JSON.parse(await command(["list", "--all", "--format", "json"]));
+      return all.find((vm: any) => vm.id === options.name || vm.configuration?.id === options.name) !== undefined;
+    },
+    inspect: async () => {
+      const [vm] = JSON.parse(await command(["inspect", options.name]));
+      return vm;
+    },
+    read: readAppleRuntime,
+    policy: applePolicy(options),
+  });
 }
-async function ready(options: AppleOptions): Promise<void> {
+
+async function ready(options: RuntimeSelection): Promise<void> {
   let last = "";
   const until = Date.now() + 300_000;
   while (Date.now() < until) {
@@ -61,14 +91,34 @@ async function ready(options: AppleOptions): Promise<void> {
   }
   throw new Error(`Apple VM initialization timed out. Inspect container logs ${options.name}. ${last}`);
 }
-async function startExisting(options: AppleOptions): Promise<any> {
+
+async function startExisting(options: RuntimeSelection): Promise<any> {
   const vm = await findVM(options);
   if (!vm) throw new Error("Apple VM is not configured. Run: layerfs-mcp apple setup");
   if (vm.status?.state !== "running") await command(["start", options.name]);
   await ready(options);
   return vm;
 }
-async function setup(options: AppleOptions): Promise<void> {
+
+function drifted(existing: any, options: RuntimeSelection): boolean {
+  const cfg = existing.configuration;
+  const image = options.image.includes("/") ? options.image : `docker.io/library/${options.image}`;
+  const source = cfg.mounts.find((mount: any) => mount.destination === "/source")?.source;
+  const archive = cfg.mounts.find((mount: any) => mount.destination === "/input/sandbox.oci.tar")?.source;
+  const sandboxImage = cfg.initProcess.environment.find((value: string) => value.startsWith("LAYERFS_APPLE_SANDBOX_IMAGE="))?.split("=").slice(1).join("=");
+  const memory = /^(\d+)([KMGTP]?)$/i.exec(options.memory)!;
+  const bytes = Number(memory[1]) * 1024 ** (memory[2] ? "KMGTP".indexOf(memory[2].toUpperCase()) + 1 : 0);
+  return cfg.image.reference !== image || source !== options.source || archive !== options.archive
+    || sandboxImage !== options.sandboxImage || cfg.resources.cpus !== Number(options.cpus) || cfg.resources.memoryInBytes !== bytes;
+}
+
+async function stateLabels(volume: string): Promise<VolumeLabels> {
+  const [record] = JSON.parse(await command(["volume", "inspect", volume]));
+  const labels = record.configuration?.labels;
+  return { owner: labels?.[LABEL.owner], project: labels?.[LABEL.project] };
+}
+
+async function setup(options: RuntimeSelection): Promise<void> {
   if (options.source) {
     options.source = await realpath(options.source);
     if (!(await stat(options.source)).isDirectory()) throw new Error("--source must be a directory");
@@ -80,31 +130,24 @@ async function setup(options: AppleOptions): Promise<void> {
   }
   const existing = await findVM(options);
   if (existing) {
-    const cfg = existing.configuration;
-    const image = options.image.includes("/") ? options.image : `docker.io/library/${options.image}`;
-    const source = cfg.mounts.find((mount: any) => mount.destination === "/source")?.source;
-    const archive = cfg.mounts.find((mount: any) => mount.destination === "/input/sandbox.oci.tar")?.source;
-    const sandboxImage = cfg.initProcess.environment.find((value: string) => value.startsWith("LAYERFS_APPLE_SANDBOX_IMAGE="))?.split("=").slice(1).join("=");
-    const memory = /^(\d+)([KMGTP]?)$/i.exec(options.memory)!;
-    const bytes = Number(memory[1]) * 1024 ** (memory[2] ? "KMGTP".indexOf(memory[2].toUpperCase()) + 1 : 0);
-    if (cfg.image.reference !== image || source !== options.source || archive !== options.archive || sandboxImage !== options.sandboxImage
-      || cfg.resources.cpus !== Number(options.cpus) || cfg.resources.memoryInBytes !== bytes) {
-      throw new Error(`Existing Apple VM has different creation settings (image=${cfg.image.reference}). Match its settings or use a new project; setup never silently replaces a Store or ignores creation options.`);
-    }
+    if (drifted(existing, options)) throw new Error(`Existing Apple VM has different creation settings (image=${existing.configuration.image.reference}). Match its settings or use a new project; setup never silently replaces a Store or ignores creation options.`);
     await startExisting(options); console.log(`Apple runtime ready: ${options.name}`); return;
   }
   await command(["image", "inspect", options.image]); // No implicit download of an unknown runtime image.
   const volume = `${options.name}-state`;
   const volumes = JSON.parse(await command(["volume", "list", "--format", "json"]));
   const found = volumes.find((item: any) => item.id === volume || item.configuration?.name === volume);
-  if (found) {
-    const [record] = JSON.parse(await command(["volume", "inspect", volume]));
-    if (record.configuration?.labels?.["io.layerfs-mcp.owner"] !== OWNER || record.configuration?.labels?.["io.layerfs-mcp.project"] !== options.project) throw new Error("Refusing to adopt an unrelated state volume");
-  } else await command(["volume", "create", "-s", "32G", "--label", `io.layerfs-mcp.owner=${OWNER}`, "--label", `io.layerfs-mcp.project=${options.project}`, volume]);
+  const decision = decideAdopt(found ? await stateLabels(volume) : undefined,
+    { owner: OWNER, project: options.project }, "Refusing to adopt an unrelated state volume");
+  if (decision.kind === "refuse") throw new Error(decision.message);
+  if (decision.kind === "create") {
+    // Apple state volumes carry no upstream label; adoption above never checks one.
+    await command(["volume", "create", "-s", "32G", "--label", `${LABEL.owner}=${OWNER}`, "--label", `${LABEL.project}=${options.project}`, volume]);
+  }
   const args = ["run", "--detach", "--name", options.name, "--cpus", options.cpus, "--memory", options.memory,
     "--cap-add", "ALL", "--masked-path", "NONE", "--read-only-path", "NONE",
-    "--label", `io.layerfs-mcp.owner=${OWNER}`, "--label", `io.layerfs-mcp.project=${options.project}`,
-    "--label", `io.layerfs-mcp.upstream=${UPSTREAM_COMMIT}`,
+    "--label", `${LABEL.owner}=${OWNER}`, "--label", `${LABEL.project}=${options.project}`,
+    "--label", `${LABEL.upstream}=${UPSTREAM_COMMIT}`,
     "--env", `LAYERFS_MCP_PROJECT=${options.project}`, "--volume", `${volume}:/state`];
   if (options.source) args.push("--volume", `${options.source}:/source:ro`);
   if (options.archive) args.push("--volume", `${options.archive}:/input/sandbox.oci.tar:ro`, "--env", "LAYERFS_APPLE_SANDBOX_ARCHIVE=/input/sandbox.oci.tar");
@@ -132,8 +175,11 @@ async function attached(args: string[]): Promise<void> {
 export async function appleCli(args: string[]): Promise<void> {
   const { positionals, values } = parseArgs({ args, allowPositionals: true, options: {
     help: { type: "boolean", short: "h" }, project: { type: "string" }, name: { type: "string" }, image: { type: "string" },
-    source: { type: "string" }, cpus: { type: "string" }, memory: { type: "string" },
-    "sandbox-archive": { type: "string" }, "sandbox-image": { type: "string" },
+    source: { type: "string" },
+    [APPLE_FLAG.cpus.slice(2)]: { type: "string" },
+    [APPLE_FLAG.memory.slice(2)]: { type: "string" },
+    [APPLE_FLAG.archive.slice(2)]: { type: "string" },
+    "sandbox-image": { type: "string" },
     "read-only": { type: "boolean" }, "no-operator": { type: "boolean" }, "disable-exec": { type: "boolean" },
   } });
   if (values.help) {

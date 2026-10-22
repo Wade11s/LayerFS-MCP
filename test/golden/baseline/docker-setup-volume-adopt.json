@@ -1,0 +1,52 @@
+{
+  "argv": [
+    "dist/cli.js",
+    "docker",
+    "setup",
+    "--project",
+    "golden",
+    "--image",
+    "example/runtime:local"
+  ],
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "LayerFS-MCP: Refusing to adopt an unrelated Docker volume\n",
+  "calls": [
+    {
+      "bin": "docker",
+      "args": [
+        "ps",
+        "-aq",
+        "--filter",
+        "name=^/lfm-golden-dd56de41$"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "image",
+        "inspect",
+        "example/runtime:local"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "volume",
+        "ls",
+        "-q",
+        "--filter",
+        "name=^lfm-golden-dd56de41-home$"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "volume",
+        "inspect",
+        "lfm-golden-dd56de41-home"
+      ]
+    }
+  ],
+  "profileJson": null
+}

@@ -1,32 +1,76 @@
 import { spawn } from "node:child_process";
 import { parseArgs } from "node:util";
 import { realpath, stat } from "node:fs/promises";
-import { appleOptions } from "./apple.js";
 import { UPSTREAM_COMMIT } from "./backend.js";
-import { capture, defaultImage } from "./runtime.js";
+import type { RuntimeDriver } from "./driver.js";
+import { capture } from "./host-exec.js";
+import { assertOwned, decideAdopt, findOwned, LABEL, type OwnedRuntime, type OwnershipPolicy, type VolumeLabels } from "./ownership.js";
+import { defaultImage } from "./package-info.js";
 import { isolatedEntry } from "./process.js";
+import { parseSelection, type RuntimeIdentity } from "./selection.js";
 
 const OWNER = "layerfs-mcp.docker.v1";
-const bin = process.env.LAYERFS_DOCKER_BIN || "docker";
-type Options = ReturnType<typeof appleOptions>;
+const dockerBin = () => process.env.LAYERFS_DOCKER_BIN || "docker";
+const bin = dockerBin();
+type Options = RuntimeIdentity;
 const command = (args: string[]) => capture(bin, args);
 
-export function assertDockerOwnership(record: any, options: Pick<Options, "name" | "project">): void {
+export const dockerDriver: RuntimeDriver = {
+  backend: "docker",
+  engine: () => ({
+    bin: dockerBin(),
+    ensure: async signal => {
+      const os = await capture(dockerBin(), ["info", "--format", "{{.OSType}}"], signal);
+      if (os.trim() !== "linux") throw new Error("Docker must use Linux containers");
+    },
+    imageBuildArgs: image => ["build", "--target", "default", "-t", image],
+  }),
+};
+
+function dockerPolicy(options: Pick<RuntimeIdentity, "name" | "project">): OwnershipPolicy {
+  return {
+    expectedName: `/${options.name}`,
+    expectedProject: options.project,
+    owner: OWNER,
+    upstream: UPSTREAM_COMMIT,
+    requiredVolumes: [
+      { destination: "/layerfs-store", name: `${options.name}-store` },
+      { destination: "/layerfs-home", name: `${options.name}-home` },
+    ],
+    allowedDestinations: ["/layerfs-store", "/layerfs-home", "/var/run/docker.sock", "/source"],
+    messages: {
+      notOwned: "Refusing to adopt an unrelated Docker runtime",
+      wrongVolume: "Docker runtime has the wrong project volume",
+      unexpectedMount: "Docker runtime has unexpected host mounts",
+    },
+  };
+}
+
+function readDockerRuntime(record: any): OwnedRuntime {
   const labels = record.Config?.Labels;
-  if (record.Name !== `/${options.name}` || labels?.["io.layerfs-mcp.owner"] !== OWNER
-    || labels?.["io.layerfs-mcp.project"] !== options.project || labels?.["io.layerfs-mcp.upstream"] !== UPSTREAM_COMMIT) throw new Error("Refusing to adopt an unrelated Docker runtime");
-  for (const [destination, suffix] of [["/layerfs-store", "store"], ["/layerfs-home", "home"]]) {
-    if (!record.Mounts?.some((mount: any) => mount.Destination === destination && mount.Type === "volume" && mount.Name === `${options.name}-${suffix}`)) throw new Error("Docker runtime has the wrong project volume");
-  }
-  if (record.Mounts.some((mount: any) => !["/layerfs-store", "/layerfs-home", "/var/run/docker.sock", "/source"].includes(mount.Destination))) throw new Error("Docker runtime has unexpected host mounts");
+  const mounts: any[] = record.Mounts ?? [];
+  return {
+    name: record.Name,
+    labels: { owner: labels?.[LABEL.owner], project: labels?.[LABEL.project], upstream: labels?.[LABEL.upstream] },
+    destinations: mounts.map(mount => mount.Destination),
+    volumes: mounts.filter(mount => mount.Type === "volume").map(mount => ({ destination: mount.Destination, name: mount.Name })),
+  };
+}
+
+export function assertDockerOwnership(record: unknown, options: { name: string; project: string }): void {
+  assertOwned(readDockerRuntime(record), dockerPolicy(options));
 }
 
 async function find(options: Options): Promise<any | undefined> {
-  const ids = (await command(["ps", "-aq", "--filter", `name=^/${options.name}$`])).trim();
-  if (!ids) return;
-  const [record] = JSON.parse(await command(["inspect", options.name]));
-  assertDockerOwnership(record, options);
-  return record;
+  return findOwned({
+    listed: async () => (await command(["ps", "-aq", "--filter", `name=^/${options.name}$`])).trim() !== "",
+    inspect: async () => {
+      const [record] = JSON.parse(await command(["inspect", options.name]));
+      return record;
+    },
+    read: readDockerRuntime,
+    policy: dockerPolicy(options),
+  });
 }
 
 async function start(options: Options): Promise<any> {
@@ -37,6 +81,21 @@ async function start(options: Options): Promise<any> {
   return record;
 }
 
+async function driftMessage(existing: any, options: Options): Promise<string | undefined> {
+  // Docker Desktop rewrites bind paths, including HostConfig, under /host_mnt.
+  const source = existing.HostConfig.Mounts?.find((mount: any) => mount.Target === "/source")?.Source;
+  const desktopPath = options.source && source === `/host_mnt${options.source}`
+    && /docker desktop/i.test(await command(["info", "--format", "{{.OperatingSystem}}"]));
+  if (existing.Config.Image === options.image && (source === options.source || desktopPath)) return;
+  return `Existing Docker runtime has different image/source settings: ${JSON.stringify({ existing: { image: existing.Config.Image, source }, requested: { image: options.image, source: options.source } })}; use matching settings or a new project`;
+}
+
+async function volumeLabels(volume: string): Promise<VolumeLabels> {
+  const [record] = JSON.parse(await command(["volume", "inspect", volume]));
+  const labels = record.Labels;
+  return { owner: labels?.[LABEL.owner], project: labels?.[LABEL.project] };
+}
+
 async function setup(options: Options): Promise<void> {
   if (options.source) {
     options.source = await realpath(options.source);
@@ -44,11 +103,8 @@ async function setup(options: Options): Promise<void> {
   }
   const existing = await find(options);
   if (existing) {
-    // Docker Desktop rewrites bind paths, including HostConfig, under /host_mnt.
-    const source = existing.HostConfig.Mounts?.find((mount: any) => mount.Target === "/source")?.Source;
-    const desktopPath = options.source && source === `/host_mnt${options.source}`
-      && /docker desktop/i.test(await command(["info", "--format", "{{.OperatingSystem}}"]));
-    if (existing.Config.Image !== options.image || (source !== options.source && !desktopPath)) throw new Error(`Existing Docker runtime has different image/source settings: ${JSON.stringify({ existing: { image: existing.Config.Image, source }, requested: { image: options.image, source: options.source } })}; use matching settings or a new project`);
+    const drift = await driftMessage(existing, options);
+    if (drift) throw new Error(drift);
     await start(options); return;
   }
   const image = options.sandboxImage || options.image;
@@ -58,14 +114,14 @@ async function setup(options: Options): Promise<void> {
   }
   const [sandbox] = JSON.parse(await command(["image", "inspect", image]));
   if (!/^sha256:[a-f0-9]{64}$/.test(sandbox.Id)) throw new Error("Invalid immutable Sandbox image ID");
-  const labels = ["--label", `io.layerfs-mcp.owner=${OWNER}`, "--label", `io.layerfs-mcp.project=${options.project}`, "--label", `io.layerfs-mcp.upstream=${UPSTREAM_COMMIT}`];
+  const labels = ["--label", `${LABEL.owner}=${OWNER}`, "--label", `${LABEL.project}=${options.project}`, "--label", `${LABEL.upstream}=${UPSTREAM_COMMIT}`];
   for (const suffix of ["home", "store"]) {
     const volume = `${options.name}-${suffix}`;
     const listed = (await command(["volume", "ls", "-q", "--filter", `name=^${volume}$`])).trim();
-    if (listed) {
-      const [record] = JSON.parse(await command(["volume", "inspect", volume]));
-      if (record.Labels?.["io.layerfs-mcp.owner"] !== OWNER || record.Labels?.["io.layerfs-mcp.project"] !== options.project) throw new Error("Refusing to adopt an unrelated Docker volume");
-    } else await command(["volume", "create", ...labels, volume]);
+    const decision = decideAdopt(listed ? await volumeLabels(volume) : undefined,
+      { owner: OWNER, project: options.project }, "Refusing to adopt an unrelated Docker volume");
+    if (decision.kind === "refuse") throw new Error(decision.message);
+    if (decision.kind === "create") await command(["volume", "create", ...labels, volume]);
   }
   const os = (await command(["info", "--format", "{{.OperatingSystem}}"])).trim();
   const desktop = /docker desktop/i.test(os) || process.platform !== "linux";
@@ -90,7 +146,7 @@ export async function dockerCli(args: string[]): Promise<void> {
   } });
   const action = positionals[0];
   if (positionals.length !== 1 || !["setup", "serve", "status", "stop"].includes(action!)) throw new Error("Use the unified setup, serve, status or stop command with --backend docker");
-  const options = appleOptions({ ...values, image: values.image || defaultImage("docker") });
+  const options = parseSelection(values, defaultImage("docker"));
   if (action === "setup") { await setup(options); console.error(`Docker runtime ready: ${options.name}`); return; }
   if (action === "status") {
     const record = await find(options);

@@ -1,0 +1,51 @@
+{
+  "argv": [
+    "dist/cli.js",
+    "apple",
+    "setup",
+    "--project",
+    "golden",
+    "--image",
+    "docker.io/library/layerfs-mcp-apple:local"
+  ],
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "LayerFS-MCP: Refusing to adopt an unrelated state volume\n",
+  "calls": [
+    {
+      "bin": "container",
+      "args": [
+        "list",
+        "--all",
+        "--format",
+        "json"
+      ]
+    },
+    {
+      "bin": "container",
+      "args": [
+        "image",
+        "inspect",
+        "docker.io/library/layerfs-mcp-apple:local"
+      ]
+    },
+    {
+      "bin": "container",
+      "args": [
+        "volume",
+        "list",
+        "--format",
+        "json"
+      ]
+    },
+    {
+      "bin": "container",
+      "args": [
+        "volume",
+        "inspect",
+        "lfm-golden-dd56de41-state"
+      ]
+    }
+  ],
+  "profileJson": null
+}

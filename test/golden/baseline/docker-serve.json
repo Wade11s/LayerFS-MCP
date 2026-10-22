@@ -1,0 +1,56 @@
+{
+  "argv": [
+    "dist/cli.js",
+    "docker",
+    "serve",
+    "--project",
+    "golden"
+  ],
+  "exitCode": 0,
+  "stdout": "",
+  "stderr": "",
+  "calls": [
+    {
+      "bin": "docker",
+      "args": [
+        "ps",
+        "-aq",
+        "--filter",
+        "name=^/lfm-golden-dd56de41$"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "inspect",
+        "lfm-golden-dd56de41"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "exec",
+        "lfm-golden-dd56de41",
+        "node",
+        "-e",
+        "const fs=require('node:fs'); for(const p of ['/layerfs-home','/layerfs-store/global']) { fs.mkdirSync(p,{recursive:true,mode:0o700}); fs.chmodSync(p,0o700); }"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "--env",
+        "LAYERFS_TRACE=1",
+        "--env",
+        "LAYERFS_TRACE_STEP=3",
+        "lfm-golden-dd56de41",
+        "node",
+        "-e",
+        "const fs=require('node:fs');\nconst dir=fs.mkdtempSync(require('node:path').join(require('node:os').tmpdir(),'layerfs-mcp-'));\nfs.chmodSync(dir,0o700); process.env.TMPDIR=dir;\nprocess.once('exit',()=>{try{fs.rmSync(dir,{recursive:true,force:true})}catch{}});\nconst child=require('node:child_process').spawn(process.execPath,[\"/app/dist/cli.js\",...[\"--transport\",\"stdio\"]],{stdio:'inherit',env:process.env});\nfor(const signal of ['SIGINT','SIGTERM']) process.once(signal,()=>child.kill(signal));\nchild.once('error',error=>{console.error(error);process.exitCode=1});\nchild.once('exit',(code,signal)=>{process.exitCode=code ?? (signal==='SIGINT'?130:143)});"
+      ]
+    }
+  ],
+  "profileJson": null
+}
