@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "layerfs": {
+      "command": "layerfs-mcp",
+      "args": ["serve", "--backend", "apple-container", "--project", "website"]
+    }
+  }
+}

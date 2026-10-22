@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "layerfs": {
+      "url": "http://127.0.0.1:8787/mcp",
+      "headers": { "Authorization": "Bearer REPLACE_WITH_TOKEN_FROM_ENV_FILE" }
+    }
+  }
+}

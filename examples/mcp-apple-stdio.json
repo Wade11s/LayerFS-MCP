@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "layerfs": {
+      "command": "node",
+      "args": [
+        "/absolute/path/LayerFS-MCP/dist/cli.js",
+        "apple", "serve", "--project", "default"
+      ]
+    }
+  }
+}

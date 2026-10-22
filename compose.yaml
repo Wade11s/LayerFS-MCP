@@ -1,0 +1,29 @@
+services:
+  layerfs-mcp:
+    image: layerfs-mcp:local
+    build: .
+    init: true
+    restart: unless-stopped
+    command: ["--transport", "http", "--host", "0.0.0.0"]
+    ports:
+      - "127.0.0.1:8787:8787"
+    environment:
+      LAYERFS_MCP_PROJECT: ${LAYERFS_MCP_PROJECT:-default}
+      LAYERFS_MCP_TOKEN: ${LAYERFS_MCP_TOKEN:?Set a bearer token in .env}
+      LAYERFS_IMAGE: ${LAYERFS_IMAGE:?Set the immutable local runtime image id in .env}
+      LAYERFS_VOLUME: layerfs-mcp-store
+      LAYERFS_CONTAINER_PREFIX: layerfs-mcp-
+      LAYERFS_DAEMON_HOST: ${LAYERFS_DAEMON_HOST:-host.docker.internal}
+    volumes:
+      - layerfs-home:/layerfs-home
+      - layerfs-store:/layerfs-store
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${LAYERFS_SOURCE_DIR:-./examples/seed}:/source:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  layerfs-home:
+    name: layerfs-mcp-home
+  layerfs-store:
+    name: layerfs-mcp-store

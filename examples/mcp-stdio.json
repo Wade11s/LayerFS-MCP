@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "layerfs": {
+      "command": "docker",
+      "args": [
+        "compose", "--project-directory", "/absolute/path/LayerFS-MCP",
+        "run", "--rm", "--no-deps", "-T", "layerfs-mcp", "--transport", "stdio"
+      ]
+    }
+  }
+}

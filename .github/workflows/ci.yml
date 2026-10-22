@@ -1,0 +1,30 @@
+name: CI
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  protocol:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: npm-shrinkwrap.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm pack --dry-run
+  native:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: sudo modprobe fuse && test -c /dev/fuse
+      - run: docker build --target native-checks -t layerfs-mcp-native:checked .
+      - run: docker build -t layerfs-mcp:local .
+      - run: npm run test:docker
+      - run: LAYERFS_TEST_BACKEND=docker LAYERFS_TEST_IMAGE=layerfs-mcp:local npm run test:managed

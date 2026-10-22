@@ -1,0 +1,15 @@
+{
+  "repository": "https://github.com/Ephemeral-AI-Lab/layerfs",
+  "commit": "5fb68ddc1acc3163e3ac3486133bde014c5fbed3",
+  "sdkVersion": "1.0.0",
+  "contract": "workspace API (#373); in-process Linux Store (#352 F-020)",
+  "publicMethods": 27,
+  "operatorMethods": 13,
+  "runtimePatches": [
+    {
+      "file": "patches/apple-container-podman.patch",
+      "sha256": "38cd6acd11e58409eb9857d0afdbf90626ea2c3ab4efe2b2da732f9ad7fe8648",
+      "scope": "Explicit Podman compatibility: seccomp request filename, canonical inspect metadata, and standard multiplexed log media aliases. Docker remains the default."
+    }
+  ]
+}

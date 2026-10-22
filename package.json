@@ -1,0 +1,74 @@
+{
+  "name": "layerfs-mcp",
+  "version": "0.1.0",
+  "description": "A complete MCP bridge to LayerFS workspaces, files, branches, history and operator APIs",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "layerfs-mcp": "dist/cli.js"
+  },
+  "exports": {
+    ".": "./dist/server.js"
+  },
+  "files": [
+    "dist",
+    "src",
+    "tsconfig.json",
+    "npm-shrinkwrap.json",
+    ".dockerignore",
+    "docs",
+    "examples",
+    "upstream.lock.json",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "Dockerfile",
+    "compose.yaml",
+    "compose.linux.yaml",
+    "docker",
+    "apple",
+    "patches",
+    ".env.example",
+    "scripts/configure-docker.mjs"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit",
+    "start": "node dist/cli.js",
+    "doctor": "node dist/cli.js doctor",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "test:real": "npm run build && node --test test/real/*.test.mjs",
+    "test:docker": "node scripts/test-docker.mjs",
+    "test:apple": "npm run build && node scripts/test-apple.mjs",
+    "test:managed": "npm run build && node scripts/test-managed.mjs",
+    "docker:configure": "node scripts/configure-docker.mjs",
+    "verify:upstream": "npm run build && node scripts/verify-upstream.mjs",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "express": "^5.1.0",
+    "proper-lockfile": "4.1.2",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "^22.18.0",
+    "@types/proper-lockfile": "4.1.4",
+    "typescript": "^5.9.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Wade11s/LayerFS-MCP.git"
+  },
+  "homepage": "https://github.com/Wade11s/LayerFS-MCP#readme",
+  "bugs": {
+    "url": "https://github.com/Wade11s/LayerFS-MCP/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}

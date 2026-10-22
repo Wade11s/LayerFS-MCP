@@ -1,0 +1,8 @@
+# Linux: share the Docker host's loopback, where LayerFS publishes daemon ports.
+services:
+  layerfs-mcp:
+    network_mode: host
+    ports: !reset []
+    command: ["--transport", "http", "--host", "127.0.0.1"]
+    environment:
+      LAYERFS_DAEMON_HOST: 127.0.0.1
