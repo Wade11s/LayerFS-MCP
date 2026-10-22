@@ -1,5 +1,14 @@
 import { isAbsolute, resolve } from "node:path";
-import { storePolicySchema } from "./contract.js";
+import { z } from "zod";
+
+const integer = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
+export const storePolicySchema = z.object({
+  smallFileThreshold: integer.optional(),
+  wholeFileDepth: integer.max(255).optional(),
+  chunkDepth: integer.max(255).optional(),
+  metadataDepth: integer.max(255).optional(),
+}).strict();
+export const PROJECT_NAME_PATTERN = /^[a-z0-9](?:[a-z0-9_.-]{0,61}[a-z0-9])?$/;
 
 export interface Config {
   project: string;
@@ -17,7 +26,7 @@ export interface Config {
 
 export function configuration(env: NodeJS.ProcessEnv = process.env): Config {
   const project = env.LAYERFS_MCP_PROJECT || "default";
-  if (!/^[a-z0-9](?:[a-z0-9_.-]{0,61}[a-z0-9])?$/.test(project)) throw new Error("Invalid LAYERFS_MCP_PROJECT");
+  if (!PROJECT_NAME_PATTERN.test(project)) throw new Error("Invalid LAYERFS_MCP_PROJECT");
   const transport = env.LAYERFS_MCP_TRANSPORT || "stdio";
   if (env.LAYERFS_ENGINE && !["docker", "podman"].includes(env.LAYERFS_ENGINE)) throw new Error("Unknown LAYERFS_ENGINE");
   if (transport !== "stdio" && transport !== "http") throw new Error("Transport must be stdio or http");

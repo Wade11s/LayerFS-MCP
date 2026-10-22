@@ -24,12 +24,19 @@ export async function sdkDirectory(input: string): Promise<string> {
   throw Object.assign(new Error("LAYERFS_SDK_PATH must point to a LayerFS checkout or its sdk/js directory"), { code: "ConfigurationError" });
 }
 
+function methodHolder(client: API, operator: API, method: string): { holder: any; fn: any } {
+  const parts = method.split(".");
+  if (parts[0] === "operator") parts.shift();
+  const name = parts.pop()!;
+  let holder: any = method.startsWith("operator.") ? operator : client;
+  for (const part of parts) holder = holder?.[part];
+  return { holder, fn: holder?.[name] };
+}
+
 export function assertContract(client: API, operator: API): void {
   for (const definition of tools) {
-    const parts = definition.method.split(".");
-    let target: any = parts[0] === "operator" ? operator : client;
-    for (const part of parts[0] === "operator" ? parts.slice(1) : parts) target = target?.[part];
-    if (typeof target !== "function") throw Object.assign(new Error(`Incompatible LayerFS SDK: missing ${definition.method}. Use upstream ${UPSTREAM_COMMIT}.`), { code: "IncompatibleSDK" });
+    const { fn } = methodHolder(client, operator, definition.method);
+    if (typeof fn !== "function") throw Object.assign(new Error(`Incompatible LayerFS SDK: missing ${definition.method}. Use upstream ${UPSTREAM_COMMIT}.`), { code: "IncompatibleSDK" });
   }
 }
 
@@ -61,12 +68,8 @@ export class LayerFSBackend implements Backend {
   async invoke(method: string, args: unknown[]): Promise<unknown> {
     if (!tools.some(tool => tool.method === method)) throw Object.assign(new Error("Unknown LayerFS method"), { code: "UnknownMethod" });
     const { client, operator } = await this.load();
-    const parts = method.split(".");
-    if (parts[0] === "operator") parts.shift();
-    const name = parts.pop()!;
-    let target = method.startsWith("operator.") ? operator : client;
-    for (const part of parts) target = target[part];
-    return target[name].apply(target, args); // One invocation; never retry a mutation or an uncertain call.
+    const { holder, fn } = methodHolder(client, operator, method);
+    return fn.apply(holder, args); // One invocation; never retry a mutation or an uncertain call.
   }
 
   async diagnostics(): Promise<Record<string, unknown>> {
