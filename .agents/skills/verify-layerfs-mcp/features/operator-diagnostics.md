@@ -2,20 +2,24 @@
 
 ## Sub-features
 
-- Store-level: `operator_store_stats`, `operator_store_commits { branch }`, `operator_store_overwritten { layer }`.
-- File-level: `operator_files_stats`, `operator_files_history` (both `{ ref, path }`).
-- Global: `operator_inspect_snapshot`, `operator_sandbox_list`, `operator_process_list`, `operator_project_progress` (null once init finished).
+- Store-level: `layerfs_operator_store_stats`, `layerfs_operator_store_commits { branch, pageSize?, pagePos? }` (checkpoint records with storage diagnostics), `layerfs_operator_store_overwritten { layer, pageSize?, pagePos? }` (pages the layers a publication overwrote, newest first).
+- File-level: `layerfs_operator_files_stats { ref, path }` returns `{size, revisions, revisionsMore, logical, canonical, stored, metadata}`; `layerfs_operator_files_history { ref, path, pageSize?, pagePos? }` pages revision diagnostics. Only `stats` takes the bare pair; `history` also pages.
+- Global: `layerfs_operator_inspect_snapshot` (optional `since`), `layerfs_operator_sandbox_list`, `layerfs_operator_process_list`, `layerfs_operator_project_progress` (null once init finished).
+- Default configuration exposes all of them; `--no-operator` hides every `operator.*` tool, and `--read-only` additionally hides `inspect_snapshot` and `sandbox_list` because they carry no read-only annotation.
 
 ## How to get to it (user POV)
 
-The agent (or an operator) asks for storage stats, layer history, and runtime inventory to explain space usage, dedup behavior, or leftover sandboxes.
+The agent or an operator asks for storage stats, checkpoint history, and runtime inventory to explain space usage, dedup behavior, or leftover sandboxes.
 
 ## Driving it with the MCP SDK
 
-Easiest on a `--keep` drive (instance stays up), or extend the ad-hoc snippet from SKILL.md after `ready`. Sequence that proves real data: `branch_publish` → keep `publishedLayer.id` → `operator_store_overwritten { layer: <id> }` returns the layer's overwrite chain; `operator_store_commits { branch: "merged" }` lists the merge; `operator_files_history { ref: "main", path: "/a.txt" }` shows the edit trail created by the files-and-branches journey.
+Easiest on a `--keep` drive, or after `ready` in the ad-hoc snippet from SKILL.md. Sequence that proves real data: `branch_publish` → keep `structuredContent.result.publishedLayer.id` → `operator_store_overwritten { layer }` returns one page of overwritten layers; `operator_store_commits { branch: "merged" }` returns that branch's checkpoint records; `operator_files_history { ref: "main", path: "/a.txt", pageSize: 10 }` returns revision diagnostics; `operator_project_progress` returns null after init.
 
 ## Gotchas
 
-- `operator_store_overwritten` needs a real layer id — take it from a `branch_publish` result, never invent one.
-- `operator_project_progress` is null unless an import is actually running; null here is the *pass* value after init.
-- Operator tools can be hidden in restricted deployments; a verification drive must run the default (visible) configuration.
+- Registered names carry the prefix: `layerfs_operator_*`. `listTools` never shows the short `operator_store_stats` form, and `helpers/drive.mjs` adds the prefix itself while a raw SDK `callTool` does not.
+- A single call returns one page shaped `{items, hasMore, nextPagePos}`. Do not describe the result as a complete overwrite chain or a full edit trail; pass `nextPagePos` as `pagePos` to walk further.
+- `operator_store_commits` needs a real branch name. `main` is a published ref, not a queryable branch: asking for `{ branch: "main" }` returns `NoSuchBranch`. Query the branch you forked or merged.
+- `operator_inspect_snapshot` and `operator_sandbox_list` are not read-only: upstream discovery may reclaim stopped Sandbox records, so treat them as a moving observation, not an inventory.
+- `operator_store_overwritten` needs a real layer id taken from a publish result, never an invented one.
+- `operator_project_progress` is null unless an import is running. Null after init is the pass value.
