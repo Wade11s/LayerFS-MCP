@@ -3,7 +3,8 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import type { Backend } from "./backend.js";
 import { UPSTREAM_COMMIT } from "./backend.js";
 import { tools } from "./contract.js";
-import { helperArguments, prepareRuntime, runtimeError, VERSION, type RuntimeProfile } from "./runtime.js";
+import { helperArguments, prepareRuntime, runtimeError, type RuntimeProfile } from "./runtime.js";
+import { VERSION } from "./package-info.js";
 
 export class ManagedBackend implements Backend {
   private client?: Client;

@@ -1,43 +1,32 @@
-import { execFile, spawn } from "node:child_process";
-import { promisify } from "node:util";
 import { readFile, mkdir, rename, writeFile, realpath } from "node:fs/promises";
-import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { homedir } from "node:os";
-import { fileURLToPath } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 import lockfile from "proper-lockfile";
 import { z } from "zod";
-import { appleOptions } from "./apple.js";
+import { loadDriver } from "./driver.js";
+import { assertCreationFlags, assertHostForProfile, setupReentryFlags } from "./driver-flags.js";
+import { capture, run } from "./host-exec.js";
+import { CLI, PACKAGE_ROOT, defaultImage } from "./package-info.js";
+import { assertProjectName, parseSelection, type RuntimeInput } from "./selection.js";
 
-const PACKAGE_ROOT = fileURLToPath(new URL("../", import.meta.url));
-export const VERSION: string = JSON.parse(readFileSync(join(PACKAGE_ROOT, "package.json"), "utf8")).version;
-const CLI = join(PACKAGE_ROOT, "dist/cli.js");
-const exec = promisify(execFile);
 const profileSchema = z.object({
   version: z.literal(1), backend: z.enum(["apple", "docker"]), project: z.string(),
   name: z.string(), image: z.string(), source: z.string().optional(),
   cpus: z.string(), memory: z.string(), archive: z.string().optional(), sandboxImage: z.string().optional(),
 }).strict();
 export type RuntimeProfile = z.infer<typeof profileSchema>;
-export type RuntimeInput = Record<string, unknown>;
-const configDirectory = () => resolve(process.env.LAYERFS_MCP_CONFIG_DIR || join(homedir(), ".config", "layerfs-mcp"));
-export const defaultImage = (backend: "apple" | "docker") => `docker.io/library/layerfs-mcp${backend === "apple" ? "-apple" : ""}:${VERSION}`;
+export type HostBackend = RuntimeProfile["backend"];
+export const configDirectory = () => resolve(process.env.LAYERFS_MCP_CONFIG_DIR || join(homedir(), ".config", "layerfs-mcp"));
 export const runtimeError = (code: string, message: string, detail?: unknown) => Object.assign(new Error(message), { code, detail });
 
-export async function capture(bin: string, args: string[], signal?: AbortSignal): Promise<string> {
-  return (await exec(bin, args, { signal, maxBuffer: 16 * 1024 * 1024 })).stdout;
-}
+type CreationField = Exclude<keyof RuntimeProfile, "version" | "backend" | "project">;
+const CREATION_FIELDS = ["name", "image", "source", "cpus", "memory", "archive", "sandboxImage"] as const satisfies readonly CreationField[];
 
-/** External commands never write into the MCP stdout channel. */
-async function run(bin: string, args: string[], signal?: AbortSignal): Promise<void> {
-  const child = spawn(bin, args, { stdio: ["ignore", 2, 2], signal });
-  await new Promise<void>((resolve, reject) => {
-    child.once("error", reject);
-    child.once("exit", (code, stopped) => code === 0 ? resolve() : reject(new Error(`${bin} ${args[0]} failed (${stopped || code})`)));
-  });
-}
+type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
+type Assert<T extends true> = T;
+type CreationFieldsComplete = Assert<Equal<(typeof CREATION_FIELDS)[number], CreationField>>;
 
 export async function withRuntimeLock<T>(key: string, signal: AbortSignal, operation: (signal: AbortSignal) => Promise<T>): Promise<T> {
   const directory = join(configDirectory(), "locks");
@@ -65,7 +54,7 @@ export async function withRuntimeLock<T>(key: string, signal: AbortSignal, opera
 }
 
 function profilePath(project: string): string {
-  appleOptions({ project }); // Validate before using the project in a filename.
+  assertProjectName(project); // Validate before using the project in a filename.
   return join(configDirectory(), "projects", `${project}.json`);
 }
 
@@ -75,7 +64,7 @@ export async function readProfile(project: string): Promise<RuntimeProfile | und
   catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return; throw error; }
   const profile = profileSchema.parse(JSON.parse(raw));
   if (profile.project !== project) throw new Error("Project configuration identity mismatch");
-  appleOptions({ ...profile, "sandbox-archive": profile.archive, "sandbox-image": profile.sandboxImage });
+  parseSelection({ ...profile, "sandbox-archive": profile.archive, "sandbox-image": profile.sandboxImage }, defaultImage(profile.backend));
   return profile;
 }
 
@@ -84,18 +73,18 @@ export async function resolveProfile(input: RuntimeInput, project: string, signa
     const previous = await readProfile(project);
     const backend = input.backend || previous?.backend || (process.platform === "darwin" ? "apple" : "docker");
     if (backend !== "apple" && backend !== "docker") throw new Error("Backend must be apple, docker or native");
-    if (backend === "apple" && process.platform !== "darwin") throw new Error("Apple Container requires a macOS host");
+    assertHostForProfile(backend);
     if (previous && backend !== previous.backend) throw new Error(`Project ${project} already uses ${previous.backend}; use a different project name for ${backend}. Stores are not migrated automatically.`);
     const selected: RuntimeInput = { ...(previous || {}), ...Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined)), project,
       image: input.image || previous?.image || defaultImage(backend) };
     if (selected.source) selected.source = await realpath(String(selected.source));
     if (selected["sandbox-archive"]) selected["sandbox-archive"] = await realpath(String(selected["sandbox-archive"]));
-    const options = appleOptions({ ...selected, "sandbox-archive": selected["sandbox-archive"] || previous?.archive,
-      "sandbox-image": selected["sandbox-image"] || previous?.sandboxImage });
+    const options = parseSelection({ ...selected, "sandbox-archive": selected["sandbox-archive"] || previous?.archive,
+      "sandbox-image": selected["sandbox-image"] || previous?.sandboxImage }, defaultImage(backend));
     const profile = profileSchema.parse(Object.fromEntries(Object.entries({ version: 1, backend, ...options }).filter(([, value]) => value !== undefined)));
-    if (backend === "docker" && (profile.archive || input.cpus || input.memory)) throw new Error("--sandbox-archive, --cpus and --memory currently apply to Apple VMs only");
+    assertCreationFlags(backend, input, profile);
     if (previous) {
-      for (const key of ["name", "image", "source", "cpus", "memory", "archive", "sandboxImage"] as const) {
+      for (const key of CREATION_FIELDS) {
         if (previous[key] !== profile[key]) throw new Error(`Project ${project} is already configured with a different ${key}; use a new project or explicitly manage its existing runtime configuration.`);
       }
       return previous;
@@ -114,34 +103,28 @@ export function helperArguments(profile: RuntimeProfile, action: string): string
   if (action === "setup") {
     if (profile.source) args.push("--source", profile.source);
     if (profile.sandboxImage) args.push("--sandbox-image", profile.sandboxImage);
-    if (profile.backend === "apple") {
-      args.push("--cpus", profile.cpus, "--memory", profile.memory);
-      if (profile.archive) args.push("--sandbox-archive", profile.archive);
-    }
+    args.push(...setupReentryFlags(profile));
   }
   return args;
 }
 
 export async function prepareRuntime(profile: RuntimeProfile, signal: AbortSignal, stage: (text: string) => void): Promise<void> {
   stage("waiting-for-runtime");
+  const driver = await loadDriver(profile.backend);
   await withRuntimeLock(`runtime:${profile.backend}:${profile.name}`, signal, async signal => {
     stage("checking-engine");
-    const bin = profile.backend === "apple" ? process.env.LAYERFS_CONTAINER_BIN || "container" : process.env.LAYERFS_DOCKER_BIN || "docker";
-    if (profile.backend === "apple") await run(bin, ["system", "start"], signal);
-    else await capture(bin, ["info", "--format", "{{.OSType}}"], signal).then(os => { if (os.trim() !== "linux") throw new Error("Docker must use Linux containers"); });
+    const engine = driver.engine();
+    await engine.ensure(signal);
     stage("preparing-image");
     // Serialize shared image preparation across projects as well as clients.
     await withRuntimeLock(`image:${profile.backend}:${profile.image}`, signal, async signal => {
-      try { await capture(bin, ["image", "inspect", profile.image], signal); return; }
+      try { await capture(engine.bin, ["image", "inspect", profile.image], signal); return; }
       catch { signal.throwIfAborted(); }
       if (profile.image !== defaultImage(profile.backend)) {
-        await run(bin, ["image", "pull", profile.image], signal);
+        await run(engine.bin, ["image", "pull", profile.image], signal);
       } else {
         stage("building-image");
-        const args = ["build", "--target", profile.backend === "apple" ? "apple-runtime" : "default", "-t", profile.image];
-        if (profile.backend === "apple") args.push("--cpus", "2", "--memory", "2G");
-        args.push(PACKAGE_ROOT);
-        await run(bin, args, signal);
+        await run(engine.bin, [...engine.imageBuildArgs(profile.image), PACKAGE_ROOT], signal);
       }
     });
     stage("starting-runtime");

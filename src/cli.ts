@@ -6,17 +6,15 @@ import { LayerFSBackend, checkNative, type Backend } from "./backend.js";
 import { createServer } from "./server.js";
 import { serveHttp } from "./http.js";
 import { ManagedBackend } from "./managed.js";
-import { resolveProfile, readProfile, helperArguments, capture, withRuntimeLock, VERSION } from "./runtime.js";
+import { isHostCommand, runLegacyCommand } from "./driver.js";
+import { capture } from "./host-exec.js";
+import { VERSION } from "./package-info.js";
+import { resolveProfile, readProfile, helperArguments, withRuntimeLock } from "./runtime.js";
 
 async function main(): Promise<void> {
-  if (process.argv[2] === "apple") {
-    const { appleCli } = await import("./apple.js");
-    await appleCli(process.argv.slice(3));
-    return;
-  }
-  if (process.argv[2] === "docker") {
-    const { dockerCli } = await import("./docker.js");
-    await dockerCli(process.argv.slice(3));
+  const command = process.argv[2];
+  if (isHostCommand(command)) {
+    await runLegacyCommand(command, process.argv.slice(3));
     return;
   }
   const { values, positionals } = parseArgs({ allowPositionals: true, options: {
