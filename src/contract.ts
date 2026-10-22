@@ -106,10 +106,3 @@ export const tools: ToolDefinition[] = [
   define("operator.process.list", "List the project's background processes, including their Sandbox ids.", {}, () => [], readonly),
   define("operator.process.cancel", "Cancel a background process by its persisted process id.", { process: nonempty }, a => [a.process], { destructive: true, execution: true }),
 ];
-
-export const storePolicySchema = z.object({
-  smallFileThreshold: integer.optional(),
-  wholeFileDepth: integer.max(255).optional(),
-  chunkDepth: integer.max(255).optional(),
-  metadataDepth: integer.max(255).optional(),
-}).strict();
