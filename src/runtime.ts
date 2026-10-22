@@ -11,9 +11,9 @@ import lockfile from "proper-lockfile";
 import { z } from "zod";
 import { appleOptions } from "./apple.js";
 
-export const PACKAGE_ROOT = fileURLToPath(new URL("../", import.meta.url));
+const PACKAGE_ROOT = fileURLToPath(new URL("../", import.meta.url));
 export const VERSION: string = JSON.parse(readFileSync(join(PACKAGE_ROOT, "package.json"), "utf8")).version;
-export const CLI = join(PACKAGE_ROOT, "dist/cli.js");
+const CLI = join(PACKAGE_ROOT, "dist/cli.js");
 const exec = promisify(execFile);
 const profileSchema = z.object({
   version: z.literal(1), backend: z.enum(["apple", "docker"]), project: z.string(),
@@ -22,7 +22,7 @@ const profileSchema = z.object({
 }).strict();
 export type RuntimeProfile = z.infer<typeof profileSchema>;
 export type RuntimeInput = Record<string, unknown>;
-export const configDirectory = () => resolve(process.env.LAYERFS_MCP_CONFIG_DIR || join(homedir(), ".config", "layerfs-mcp"));
+const configDirectory = () => resolve(process.env.LAYERFS_MCP_CONFIG_DIR || join(homedir(), ".config", "layerfs-mcp"));
 export const defaultImage = (backend: "apple" | "docker") => `docker.io/library/layerfs-mcp${backend === "apple" ? "-apple" : ""}:${VERSION}`;
 export const runtimeError = (code: string, message: string, detail?: unknown) => Object.assign(new Error(message), { code, detail });
 
@@ -31,7 +31,7 @@ export async function capture(bin: string, args: string[], signal?: AbortSignal)
 }
 
 /** External commands never write into the MCP stdout channel. */
-export async function run(bin: string, args: string[], signal?: AbortSignal): Promise<void> {
+async function run(bin: string, args: string[], signal?: AbortSignal): Promise<void> {
   const child = spawn(bin, args, { stdio: ["ignore", 2, 2], signal });
   await new Promise<void>((resolve, reject) => {
     child.once("error", reject);
