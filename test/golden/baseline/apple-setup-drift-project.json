@@ -1,0 +1,32 @@
+{
+  "argv": [
+    "dist/cli.js",
+    "apple",
+    "setup",
+    "--project",
+    "golden",
+    "--image",
+    "docker.io/library/layerfs-mcp-apple:local"
+  ],
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "LayerFS-MCP: Refusing to use a VM not owned by this LayerFS-MCP project\n",
+  "calls": [
+    {
+      "bin": "container",
+      "args": [
+        "list",
+        "--all",
+        "--format",
+        "json"
+      ]
+    },
+    {
+      "bin": "container",
+      "args": [
+        "inspect",
+        "lfm-golden-dd56de41"
+      ]
+    }
+  ]
+}

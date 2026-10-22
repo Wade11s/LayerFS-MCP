@@ -1,0 +1,48 @@
+{
+  "argv": [
+    "dist/cli.js",
+    "setup",
+    "--project",
+    "golden",
+    "--backend",
+    "apple",
+    "--image",
+    "docker.io/library/layerfs-mcp-apple:local"
+  ],
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "LayerFS-MCP: Refusing to use a VM not owned by this LayerFS-MCP project\nLayerFS-MCP runtime preparation failed: <NODE> <ROOT>/dist/cli.js failed (1)\nLayerFS-MCP: <NODE> <ROOT>/dist/cli.js failed (1)\n",
+  "calls": [
+    {
+      "bin": "container",
+      "args": [
+        "system",
+        "start"
+      ]
+    },
+    {
+      "bin": "container",
+      "args": [
+        "image",
+        "inspect",
+        "docker.io/library/layerfs-mcp-apple:local"
+      ]
+    },
+    {
+      "bin": "container",
+      "args": [
+        "list",
+        "--all",
+        "--format",
+        "json"
+      ]
+    },
+    {
+      "bin": "container",
+      "args": [
+        "inspect",
+        "lfm-golden-dd56de41"
+      ]
+    }
+  ]
+}

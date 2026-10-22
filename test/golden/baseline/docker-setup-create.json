@@ -1,0 +1,156 @@
+{
+  "argv": [
+    "dist/cli.js",
+    "docker",
+    "setup",
+    "--project",
+    "golden",
+    "--image",
+    "example/runtime:local"
+  ],
+  "exitCode": 0,
+  "stdout": "",
+  "stderr": "Docker runtime ready: lfm-golden-dd56de41\n",
+  "calls": [
+    {
+      "bin": "docker",
+      "args": [
+        "ps",
+        "-aq",
+        "--filter",
+        "name=^/lfm-golden-dd56de41$"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "image",
+        "inspect",
+        "example/runtime:local"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "volume",
+        "ls",
+        "-q",
+        "--filter",
+        "name=^lfm-golden-dd56de41-home$"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "volume",
+        "create",
+        "--label",
+        "io.layerfs-mcp.owner=layerfs-mcp.docker.v1",
+        "--label",
+        "io.layerfs-mcp.project=golden",
+        "--label",
+        "io.layerfs-mcp.upstream=5fb68ddc1acc3163e3ac3486133bde014c5fbed3",
+        "lfm-golden-dd56de41-home"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "volume",
+        "ls",
+        "-q",
+        "--filter",
+        "name=^lfm-golden-dd56de41-store$"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "volume",
+        "create",
+        "--label",
+        "io.layerfs-mcp.owner=layerfs-mcp.docker.v1",
+        "--label",
+        "io.layerfs-mcp.project=golden",
+        "--label",
+        "io.layerfs-mcp.upstream=5fb68ddc1acc3163e3ac3486133bde014c5fbed3",
+        "lfm-golden-dd56de41-store"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "info",
+        "--format",
+        "{{.OperatingSystem}}"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "run",
+        "-d",
+        "--init",
+        "--name",
+        "lfm-golden-dd56de41",
+        "--label",
+        "io.layerfs-mcp.owner=layerfs-mcp.docker.v1",
+        "--label",
+        "io.layerfs-mcp.project=golden",
+        "--label",
+        "io.layerfs-mcp.upstream=5fb68ddc1acc3163e3ac3486133bde014c5fbed3",
+        "--mount",
+        "type=volume,source=lfm-golden-dd56de41-home,target=/layerfs-home",
+        "--mount",
+        "type=volume,source=lfm-golden-dd56de41-store,target=/layerfs-store",
+        "--mount",
+        "type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock",
+        "--env",
+        "LAYERFS_MCP_PROJECT=golden",
+        "--env",
+        "LAYERFS_VOLUME=lfm-golden-dd56de41-store",
+        "--env",
+        "LAYERFS_IMAGE=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "--env",
+        "LAYERFS_CONTAINER_PREFIX=lfm-golden-dd56de41-sandbox-",
+        "--env",
+        "LAYERFS_MCP_HOST_RUNTIME=docker",
+        "--env",
+        "LAYERFS_DAEMON_HOST=host.docker.internal",
+        "--add-host",
+        "host.docker.internal:host-gateway",
+        "--entrypoint",
+        "node",
+        "example/runtime:local",
+        "-e",
+        "setInterval(() => {}, 2147483647)"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "ps",
+        "-aq",
+        "--filter",
+        "name=^/lfm-golden-dd56de41$"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "inspect",
+        "lfm-golden-dd56de41"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "exec",
+        "lfm-golden-dd56de41",
+        "node",
+        "-e",
+        "const fs=require('node:fs'); for(const p of ['/layerfs-home','/layerfs-store/global']) { fs.mkdirSync(p,{recursive:true,mode:0o700}); fs.chmodSync(p,0o700); }"
+      ]
+    }
+  ]
+}

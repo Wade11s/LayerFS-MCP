@@ -1,0 +1,45 @@
+{
+  "argv": [
+    "dist/cli.js",
+    "setup",
+    "--project",
+    "golden",
+    "--backend",
+    "apple"
+  ],
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "LayerFS-MCP runtime preparation failed: <ROOT>/test/golden/fake-container.mjs build failed (1)\nLayerFS-MCP: <ROOT>/test/golden/fake-container.mjs build failed (1)\n",
+  "calls": [
+    {
+      "bin": "container",
+      "args": [
+        "system",
+        "start"
+      ]
+    },
+    {
+      "bin": "container",
+      "args": [
+        "image",
+        "inspect",
+        "docker.io/library/layerfs-mcp-apple:0.1.0"
+      ]
+    },
+    {
+      "bin": "container",
+      "args": [
+        "build",
+        "--target",
+        "apple-runtime",
+        "-t",
+        "docker.io/library/layerfs-mcp-apple:0.1.0",
+        "--cpus",
+        "2",
+        "--memory",
+        "2G",
+        "<ROOT>/"
+      ]
+    }
+  ]
+}

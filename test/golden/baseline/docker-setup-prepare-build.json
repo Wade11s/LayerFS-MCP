@@ -1,0 +1,42 @@
+{
+  "argv": [
+    "dist/cli.js",
+    "setup",
+    "--project",
+    "golden",
+    "--backend",
+    "docker"
+  ],
+  "exitCode": 1,
+  "stdout": "",
+  "stderr": "LayerFS-MCP runtime preparation failed: <ROOT>/test/golden/fake-docker.mjs build failed (1)\nLayerFS-MCP: <ROOT>/test/golden/fake-docker.mjs build failed (1)\n",
+  "calls": [
+    {
+      "bin": "docker",
+      "args": [
+        "info",
+        "--format",
+        "{{.OSType}}"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "image",
+        "inspect",
+        "docker.io/library/layerfs-mcp:0.1.0"
+      ]
+    },
+    {
+      "bin": "docker",
+      "args": [
+        "build",
+        "--target",
+        "default",
+        "-t",
+        "docker.io/library/layerfs-mcp:0.1.0",
+        "<ROOT>/"
+      ]
+    }
+  ]
+}

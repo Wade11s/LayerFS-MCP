@@ -39,6 +39,7 @@
     "start": "node dist/cli.js",
     "doctor": "node dist/cli.js doctor",
     "test": "npm run build && node --test test/*.test.mjs",
+    "golden": "node test/golden/replay.mjs",
     "test:real": "npm run build && node --test test/real/*.test.mjs",
     "test:docker": "node scripts/test-docker.mjs",
     "test:apple": "npm run build && node scripts/test-apple.mjs",

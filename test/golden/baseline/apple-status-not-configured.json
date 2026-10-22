@@ -1,0 +1,23 @@
+{
+  "argv": [
+    "dist/cli.js",
+    "apple",
+    "status",
+    "--project",
+    "golden"
+  ],
+  "exitCode": 0,
+  "stdout": "{\n  \"backend\": \"apple\",\n  \"runtime\": \"apple-container\",\n  \"project\": \"golden\",\n  \"name\": \"lfm-golden-dd56de41\",\n  \"state\": \"not-configured\"\n}\n",
+  "stderr": "",
+  "calls": [
+    {
+      "bin": "container",
+      "args": [
+        "list",
+        "--all",
+        "--format",
+        "json"
+      ]
+    }
+  ]
+}
