@@ -4,6 +4,7 @@ export interface HostEngine {
   readonly bin: string;
   ensure(signal: AbortSignal): Promise<void>;
   imageBuildArgs(image: string): readonly string[];
+  imageUpstream(inspected: string): string | undefined;
 }
 
 export interface RuntimeDriver {

@@ -41,6 +41,10 @@ const failed = (stderr, code = 1) => ({ stderr, code });
 const listed = json([{ id: name }]);
 const inspected = vm => json([vm]);
 
+const appleImageRecord = stamp => [{ id: `sha256:${"b".repeat(64)}`,
+  variants: [{ config: { config: { Labels: stamp ? { "io.layerfs-mcp.upstream": stamp } : {} } } }] }];
+const dockerImageRecord = stamp => [{ Config: { Labels: stamp ? { "io.layerfs-mcp.upstream": stamp } : {} } }];
+
 const appleVm = (state = "running", mutate) => {
   const vm = {
     id: name,
@@ -191,6 +195,12 @@ const scenarios = [
   },
   {
     backend: "apple",
+    name: "apple-setup-prepare-stale-image",
+    args: ["setup", "--project", project, "--backend", "apple"],
+    script: [out(), json(appleImageRecord("0000000")), failed("")],
+  },
+  {
+    backend: "apple",
     name: "apple-serve",
     env: { LAYERFS_TRACE: "1", LAYERFS_TRACE_STEP: "3", LAYERFS_MCP_TOKEN: "golden-secret" },
     args: ["apple", "serve", "--project", project, "--read-only"],
@@ -258,6 +268,24 @@ const scenarios = [
     name: "docker-setup-prepare-build",
     args: ["setup", "--project", project, "--backend", "docker"],
     script: [out("linux\n"), failed("Error: no such image\n"), failed("")],
+  },
+  {
+    backend: "docker",
+    name: "docker-setup-prepare-stale-image",
+    args: ["setup", "--project", project, "--backend", "docker"],
+    script: [out("linux\n"), json(dockerImageRecord("0000000")), failed("")],
+  },
+  {
+    backend: "docker",
+    name: "docker-setup-prepare-unlabeled-image",
+    args: ["setup", "--project", project, "--backend", "docker"],
+    script: [out("linux\n"), json(dockerImageRecord()), failed("")],
+  },
+  {
+    backend: "docker",
+    name: "docker-setup-prepare-matching-image",
+    args: ["setup", "--project", project, "--backend", "docker"],
+    script: [out("linux\n"), json(dockerImageRecord(UPSTREAM_COMMIT)), failed("Error: cannot connect to the Docker daemon\n")],
   },
   {
     backend: "docker",

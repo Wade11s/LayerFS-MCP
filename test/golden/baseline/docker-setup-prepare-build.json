@@ -35,6 +35,8 @@
         "default",
         "-t",
         "docker.io/library/layerfs-mcp:0.1.0",
+        "--label",
+        "io.layerfs-mcp.upstream=5fb68ddc1acc3163e3ac3486133bde014c5fbed3",
         "<ROOT>/"
       ]
     }
