@@ -7,3 +7,13 @@ coverage/
 *.tgz
 vendor/
 verify-evidence/
+
+# Installed skill packs. Restore with `npx skills add backnotprop/pstack`;
+# the lockfile pins their hashes. Only skills authored here are committed.
+.agents/skills/*
+!.agents/skills/verify-layerfs-mcp/
+skills-lock.json
+.claude/
+.commandcode/
+.grok/
+.hermes/
