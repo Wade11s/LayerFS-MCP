@@ -1,0 +1,23 @@
+{
+  "argv": [
+    "dist/cli.js",
+    "update",
+    "--project",
+    "golden",
+    "--image",
+    "example/runtime:next"
+  ],
+  "exitCode": 0,
+  "stdout": "{\"project\":\"golden\",\"state\":\"updated\",\"changed\":[\"image\"]}\n",
+  "stderr": "",
+  "calls": [],
+  "profileJson": {
+    "version": 1,
+    "backend": "docker",
+    "project": "golden",
+    "name": "lfm-golden-dd56de41",
+    "image": "example/runtime:next",
+    "cpus": "2",
+    "memory": "2G"
+  }
+}

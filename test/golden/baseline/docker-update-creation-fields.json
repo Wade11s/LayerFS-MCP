@@ -1,0 +1,26 @@
+{
+  "argv": [
+    "dist/cli.js",
+    "update",
+    "--project",
+    "golden",
+    "--source",
+    "<SOURCE>",
+    "--cpus",
+    "4"
+  ],
+  "exitCode": 0,
+  "stdout": "{\"project\":\"golden\",\"state\":\"updated\",\"changed\":[\"cpus\",\"source\"]}\n",
+  "stderr": "",
+  "calls": [],
+  "profileJson": {
+    "version": 1,
+    "backend": "docker",
+    "project": "golden",
+    "name": "lfm-golden-dd56de41",
+    "image": "docker.io/library/layerfs-mcp:0.1.0",
+    "source": "<SOURCE>",
+    "cpus": "4",
+    "memory": "2G"
+  }
+}

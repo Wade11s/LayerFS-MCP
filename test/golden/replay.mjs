@@ -258,6 +258,54 @@ const scenarios = [
   },
   {
     backend: "docker",
+    name: "docker-update-image",
+    prepare: "docker",
+    args: ["update", "--project", project, "--image", "example/runtime:next"],
+    script: [],
+  },
+  {
+    backend: "docker",
+    name: "docker-update-unchanged",
+    prepare: "docker",
+    args: ["update", "--project", project, "--backend", "docker"],
+    script: [],
+  },
+  {
+    backend: "docker",
+    name: "docker-update-creation-fields",
+    prepare: "docker",
+    args: ["update", "--project", project, "--source", source, "--cpus", "4"],
+    script: [],
+  },
+  {
+    backend: "docker",
+    name: "docker-update-archive-reject",
+    prepare: "docker",
+    args: ["update", "--project", project, "--sandbox-archive", archive],
+    script: [],
+  },
+  {
+    backend: "docker",
+    name: "docker-update-backend-reject",
+    prepare: "docker",
+    requiresHost: "darwin",
+    args: ["update", "--project", project, "--backend", "apple"],
+    script: [],
+  },
+  {
+    name: "docker-update-name-reject",
+    prepare: "docker",
+    args: ["update", "--project", project, "--name", "renamed-runtime"],
+    script: [],
+  },
+  {
+    backend: "docker",
+    name: "docker-update-not-configured",
+    args: ["update", "--project", project],
+    script: [],
+  },
+  {
+    backend: "docker",
     name: "docker-setup-prepare",
     args: ["setup", "--project", project, "--backend", "docker", "--image", dockerImage],
     script: [out("linux\n"), json([{ Id: sandboxId }]), out("abc123\n"),
@@ -369,7 +417,7 @@ let passed = 0;
 let failedCount = 0;
 const skipped = [];
 for (const scenario of scenarios) {
-  if (scenario.backend === "apple" && !darwin) {
+  if ((scenario.backend === "apple" || scenario.requiresHost === "darwin") && !darwin) {
     skipped.push(scenario.name);
     continue;
   }
@@ -397,7 +445,7 @@ for (const scenario of scenarios) {
   console.error(`  baseline: ${JSON.stringify(drift.expected)}`);
   console.error(`  actual:   ${JSON.stringify(drift.actual)}`);
 }
-if (skipped.length) console.log(`skipped ${skipped.length} apple scenarios (Apple host gate is macOS-only): ${skipped.join(", ")}`);
+if (skipped.length) console.log(`skipped ${skipped.length} host-gated scenarios (Apple host gate is macOS-only): ${skipped.join(", ")}`);
 console.log(`golden: ${passed} ${update ? "written" : "passed"}, ${failedCount} failed, ${skipped.length} skipped`);
 if (failedCount) {
   console.error("review the drift above; regenerate only for an intended behavior change: npm run golden -- --update");
