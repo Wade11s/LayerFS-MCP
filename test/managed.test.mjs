@@ -98,3 +98,41 @@ test("close completes even when the runtime connection never does", async () => 
   assert.equal(finished, true, "close() must complete even if connect never settles");
   assert.equal((await backend.diagnostics()).runtimeState, "closed");
 });
+
+test("a client that arrives after close is closed exactly once and the bridge never becomes ready", async () => {
+  let entered;
+  let release;
+  const inside = new Promise(resolve => { entered = resolve; });
+  const gate = new Promise(resolve => { release = resolve; });
+  let closes = 0;
+  const calls = [];
+  const remote = {
+    close: async () => { closes++; },
+    callTool: async request => { calls.push(request); return { structuredContent: { result: {} } }; },
+  };
+  const backend = new ManagedBackend(profile, async () => {}, async () => { entered(); await gate; return remote; });
+  backend.start();
+  await inside;
+  await backend.close();
+  release();
+  await gate;
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(closes, 1);
+  assert.equal((await backend.diagnostics()).runtimeState, "closed");
+  assert.equal(calls.length, 0);
+});
+
+test("close during prepare leaves the bridge closed and cancellable", async () => {
+  let entered;
+  const inside = new Promise(resolve => { entered = resolve; });
+  const backend = new ManagedBackend(profile, async (_profile, signal) => {
+    entered();
+    signal.throwIfAborted();
+    await new Promise((_resolve, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true }));
+  });
+  backend.start();
+  await inside;
+  const finished = await Promise.race([backend.close().then(() => true), new Promise(resolve => setTimeout(() => resolve(false), 1000))]);
+  assert.equal(finished, true);
+  assert.equal((await backend.diagnostics()).runtimeState, "closed");
+});

@@ -16,11 +16,16 @@ export class ManagedBackend implements Backend {
 
   constructor(readonly profile: RuntimeProfile,
     private readonly prepare = prepareRuntime,
-    private readonly connect = async (profile: RuntimeProfile): Promise<Client> => {
+    private readonly connect = async (profile: RuntimeProfile, signal: AbortSignal): Promise<Client> => {
       const client = new Client({ name: "layerfs-runtime-bridge", version: VERSION });
+      const transport = new StdioClientTransport({ command: process.execPath, args: helperArguments(profile, "serve"),
+        env: Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined)), stderr: "inherit" });
       try {
-        await client.connect(new StdioClientTransport({ command: process.execPath, args: helperArguments(profile, "serve"),
-          env: Object.fromEntries(Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined)), stderr: "inherit" }));
+        const abortPromise = new Promise<never>((_, reject) => {
+          if (signal.aborted) reject(signal.reason);
+          else signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+        });
+        await Promise.race([client.connect(transport), abortPromise]);
         return client;
       } catch (error) { await client.close(); throw error; }
     }) {}
@@ -39,7 +44,15 @@ export class ManagedBackend implements Backend {
     await this.prepare(this.profile, this.controller.signal, stage => { this.stage = stage; });
     this.controller.signal.throwIfAborted();
     this.stage = "connecting";
-    const client = await this.connect(this.profile);
+    const signal = this.controller.signal;
+    const arriving = this.connect(this.profile, signal);
+    arriving.catch(() => {});
+    arriving.then(client => { if (this.state === "closed") void client.close().catch(() => {}); });
+    const abortPromise = new Promise<never>((_, reject) => {
+      if (signal.aborted) reject(signal.reason);
+      else signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+    });
+    const client = await Promise.race([arriving, abortPromise]);
     if (this.state === "closed") { await client.close(); return; }
     client.onclose = () => {
       if (this.state === "ready") { this.state = "failed"; this.error = "Runtime connection closed; reconnect the MCP server. No operation is replayed."; }
