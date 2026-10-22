@@ -136,3 +136,20 @@ test("close during prepare leaves the bridge closed and cancellable", async () =
   assert.equal(finished, true);
   assert.equal((await backend.diagnostics()).runtimeState, "closed");
 });
+
+test("a refused handshake becomes visible failure state, not an unhandled rejection", async () => {
+  const rejections = [];
+  const onRejection = reason => rejections.push(reason);
+  process.on("unhandledRejection", onRejection);
+  try {
+    const backend = new ManagedBackend(profile, async () => {}, async () => { throw new Error("handshake refused"); });
+    backend.start();
+    await new Promise(resolve => setTimeout(resolve, 100));
+    assert.deepEqual(rejections, [], "the bridge must handle its own rejection");
+    const status = await backend.diagnostics();
+    assert.equal(status.runtimeState, "failed");
+    assert.equal(status.error, "handshake refused");
+  } finally {
+    process.off("unhandledRejection", onRejection);
+  }
+});

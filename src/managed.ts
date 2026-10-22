@@ -46,8 +46,9 @@ export class ManagedBackend implements Backend {
     this.stage = "connecting";
     const signal = this.controller.signal;
     const arriving = this.connect(this.profile, signal);
-    arriving.catch(() => {});
-    arriving.then(client => { if (this.state === "closed") void client.close().catch(() => {}); });
+    // The rejection surfaces through the race below and lands in start()'s failure
+    // handler; this arm only closes a client that arrives after close().
+    arriving.then(client => { if (this.state === "closed") void client.close().catch(() => {}); }, () => {});
     const abortPromise = new Promise<never>((_, reject) => {
       if (signal.aborted) reject(signal.reason);
       else signal.addEventListener("abort", () => reject(signal.reason), { once: true });
