@@ -4,7 +4,7 @@
 // client, writes evidence under <repo>/verify-evidence/, then tears down exactly
 // what it created. Exit 0 = pass, 1 = fail. Evidence always survives.
 import { randomUUID, createHash } from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve, dirname } from "node:path";
@@ -26,14 +26,24 @@ const flag = (name) => {
 };
 const full = args.includes("--full");
 const keep = args.includes("--keep");
+const { version } = JSON.parse(readFileSync(join(repoRoot, "package.json"), "utf8"));
+// prepareRuntime compares profile.image against this exact string to decide whether the
+// upstream label is checked, so a short tag silently takes the custom-image path.
+const defaultImage = backend => `docker.io/library/layerfs-mcp${backend === "apple" ? "-apple" : ""}:${version}`;
+const normaliseImage = (value, backend) => {
+  const short = `layerfs-mcp${backend === "apple" ? "-apple" : ""}:${version}`;
+  return value === short ? defaultImage(backend) : value;
+};
 let backend = flag("backend");
 const imageOverride = flag("image");
 if (!backend) {
-  const probe = spawnSync("docker", ["image", "inspect", "layerfs-mcp:0.1.0", "--format", "{{.Id}}"], { encoding: "utf8" });
-  if (probe.status === 0) backend = "docker";
-  else backend = process.platform === "darwin" ? "apple-container" : "docker";
+  const probe = spawnSync("docker", ["image", "inspect", defaultImage("docker"), "--format", "{{.Id}}"], { encoding: "utf8" });
+  backend = probe.status === 0 ? "docker" : (process.platform === "darwin" ? "apple-container" : "docker");
 }
-const image = imageOverride || (backend === "docker" ? "layerfs-mcp:0.1.0" : null);
+const image = imageOverride ? normaliseImage(imageOverride, backend) : defaultImage(backend);
+if (image !== defaultImage(backend)) {
+  console.error(`[drive] NOTE: ${image} is not the default image (${defaultImage(backend)}); the stale-image rebuild branch is not exercised`);
+}
 if (!existsSync(cli)) {
   console.error(`[drive] missing ${cli} — run npm run build first (see SKILL.md Launch)`);
   process.exit(1);

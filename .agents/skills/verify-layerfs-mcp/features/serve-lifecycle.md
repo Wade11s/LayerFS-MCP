@@ -25,7 +25,15 @@ The agent registers `layerfs-mcp serve --backend … --project …` under `mcpSe
 1. `helpers/drive.mjs` proves the cold-start half: handshake timing, 41 tools, `preparing`→`ready`, and the shared-seed paths.
 2. Restart persistence, ad hoc: connect client A, run a write from [`files-and-branches.md`](files-and-branches.md), close A, run `node dist/cli.js stop --project <p>`, connect client B with args `serve --project <p>` only, wait `ready`, read the same file back. Content must match. `stop` itself prints `{"project","backend","state":"stopped","volumesRetained":true}`.
 3. HTTP, ad hoc: spawn `node dist/cli.js serve --project <p> --transport http --port 0` with `LAYERFS_MCP_TOKEN=<uuid>`, parse `LayerFS-MCP listening on (\d+)` from stderr, then connect with a `StreamableHTTPClientTransport` carrying the Bearer header. Without the header the connect must fail with 401. Repeat without `LAYERFS_MCP_TOKEN` on `127.0.0.1`: the connect must succeed (loopback needs no token).
-4. Rebuild notice, ad hoc: `docker tag` an existing image over the default tag with a stale `io.layerfs-mcp.upstream` label, run `setup`, and assert the stderr line plus a `building-image` stage. Restore the image afterwards.
+4. Rebuild notice, ad hoc. `docker tag` will not work, and neither will `docker build --label`: neither changes the labels already baked into the `FROM` image. Build a thin child that re-labels, from a clean context directory (building with `/tmp` as context fails on unreadable files there):
+   ```sh
+   mkdir -p /tmp/labelctx
+   printf 'FROM docker.io/library/layerfs-mcp:<version>\nLABEL io.layerfs-mcp.upstream=deadbeef\n' > /tmp/labelctx/Dockerfile
+   docker build -q -t docker.io/library/layerfs-mcp:<version> /tmp/labelctx
+   export LAYERFS_MCP_CONFIG_DIR=$(mktemp -d)
+   node dist/cli.js setup --project rb --backend docker --image docker.io/library/layerfs-mcp:<version>
+   ```
+   Expect one stderr line, `LayerFS-MCP: runtime image docker.io/library/layerfs-mcp:<version> predates upstream <12 chars>; rebuilding`, then a rebuild that restores the label to `UPSTREAM_COMMIT`. Verify with `docker image inspect <ref> --format '{{index .Config.Labels "io.layerfs-mcp.upstream"}}'`. Save the original image id first (`--format '{{.Id}}'`) and drop the experiment afterwards.
 
 ## Gotchas
 
