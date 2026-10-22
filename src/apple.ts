@@ -20,7 +20,9 @@ export const appleDriver: RuntimeDriver = {
   engine: () => ({
     bin: containerBin(),
     ensure: async signal => { await run(containerBin(), ["system", "start"], signal); },
-    imageBuildArgs: image => ["build", "--target", "apple-runtime", "-t", image, "--cpus", "2", "--memory", "2G"],
+    imageBuildArgs: image => ["build", "--target", "apple-runtime", "-t", image, "--cpus", "2", "--memory", "2G", "--label", `${LABEL.upstream}=${UPSTREAM_COMMIT}`],
+    // container image inspect has no --format, and it reports labels on the built variant's OCI config.
+    imageUpstream: inspected => JSON.parse(inspected)[0]?.variants?.[0]?.config?.config?.Labels?.[LABEL.upstream],
   }),
 };
 

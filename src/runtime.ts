@@ -6,6 +6,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import lockfile from "proper-lockfile";
 import { z } from "zod";
 import { loadDriver } from "./driver.js";
+import { UPSTREAM_COMMIT } from "./backend.js";
 import { assertCreationFlags, assertHostForProfile, setupReentryFlags } from "./driver-flags.js";
 import { capture, run } from "./host-exec.js";
 import { CLI, PACKAGE_ROOT, defaultImage } from "./package-info.js";
@@ -118,9 +119,14 @@ export async function prepareRuntime(profile: RuntimeProfile, signal: AbortSigna
     stage("preparing-image");
     // Serialize shared image preparation across projects as well as clients.
     await withRuntimeLock(`image:${profile.backend}:${profile.image}`, signal, async signal => {
-      try { await capture(engine.bin, ["image", "inspect", profile.image], signal); return; }
-      catch { signal.throwIfAborted(); }
-      if (profile.image !== defaultImage(profile.backend)) {
+      const isDefaultImage = profile.image === defaultImage(profile.backend);
+      try {
+        const inspected = await capture(engine.bin, ["image", "inspect", profile.image], signal);
+        if (!isDefaultImage) return;
+        if (engine.imageUpstream(inspected) === UPSTREAM_COMMIT) return;
+        console.error(`LayerFS-MCP: runtime image ${profile.image} predates upstream ${UPSTREAM_COMMIT.slice(0, 12)}; rebuilding`);
+      } catch { signal.throwIfAborted(); }
+      if (!isDefaultImage) {
         await run(engine.bin, ["image", "pull", profile.image], signal);
       } else {
         stage("building-image");

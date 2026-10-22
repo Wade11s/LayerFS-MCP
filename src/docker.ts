@@ -23,7 +23,8 @@ export const dockerDriver: RuntimeDriver = {
       const os = await capture(dockerBin(), ["info", "--format", "{{.OSType}}"], signal);
       if (os.trim() !== "linux") throw new Error("Docker must use Linux containers");
     },
-    imageBuildArgs: image => ["build", "--target", "default", "-t", image],
+    imageBuildArgs: image => ["build", "--target", "default", "-t", image, "--label", `${LABEL.upstream}=${UPSTREAM_COMMIT}`],
+    imageUpstream: inspected => JSON.parse(inspected)[0]?.Config?.Labels?.[LABEL.upstream],
   }),
 };
 

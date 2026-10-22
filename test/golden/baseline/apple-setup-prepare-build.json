@@ -38,6 +38,8 @@
         "2",
         "--memory",
         "2G",
+        "--label",
+        "io.layerfs-mcp.upstream=5fb68ddc1acc3163e3ac3486133bde014c5fbed3",
         "<ROOT>/"
       ]
     }
