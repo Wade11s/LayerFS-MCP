@@ -1,5 +1,7 @@
 # Apple Container 后端
 
+**中文** · [English](en/APPLE-CONTAINER.md) · [文档索引](README.md) · [后端总览](BACKENDS.md)
+
 该后端按「一个项目一个 Apple Container VM」运行。Mac 只需要 Node.js 22+、npm 和运行中的 Apple Container 服务；构建、启动和接入均不需要 Docker Engine 或 Docker Desktop。
 
 VM 内包含 Podman/crun，负责创建 LayerFS Sandbox。它使用 Docker 兼容的本地 Unix API，但没有 Docker Engine，也不挂载宿主机的 Docker socket。Agent 仍通过标准 MCP 调用同样的 40 个 LayerFS 方法，另有 `layerfs_status`。

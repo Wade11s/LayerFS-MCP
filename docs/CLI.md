@@ -1,5 +1,9 @@
 # 统一 CLI 与 npm 分发
 
+**中文** · [English](en/CLI.md) · [文档索引](README.md)
+
+`layerfs-mcp <action>` 是唯一的运行入口。首次使用建议先看 [快速上手](QUICKSTART.md)；本页是命令、生命周期与分发的参考。
+
 统一命令为 `layerfs-mcp <action> --backend apple-container|docker|native --project <name>`。`apple-container` 为推荐名称，`apple` 是兼容别名；已有项目配置和状态中的 `apple` 标识保持兼容。Apple 与 Docker 托管后端支持相同的 `serve`、`setup`、`init`、`status`、`doctor` 和 `stop`，以及 stdio / Streamable HTTP。
 
 ## 直接启动，不要求 setup

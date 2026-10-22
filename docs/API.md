@@ -1,5 +1,9 @@
 # MCP API
 
+**中文** · [English](en/API.md) · [文档索引](README.md)
+
+全部 41 个工具、3 个资源与 1 个工作流提示词的参考。工作流层面的约定见 [工作方式](HOW-IT-WORKS.md)。
+
 工具名将上游方法的 `.` 替换为 `_` 并添加 `layerfs_` 前缀。例如 `fs.read` 对应 `layerfs_fs_read`。每个工具是独立的标准 MCP tool，参数为 JSON 对象；没有通用任意方法执行入口。一个 MCP 服务实例绑定一个项目。
 
 所有工具成功时返回 `{ "result": <上游值> }`，同时存在于 `structuredContent` 和文本 content。失败时返回 `isError: true` 与 `{ "error": { "code", "message", "detail" } }`。MCP SDK 拒绝的无效参数也会返回工具错误，此时错误可能仅有文本 content。
