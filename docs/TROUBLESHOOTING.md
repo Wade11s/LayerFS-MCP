@@ -2,7 +2,7 @@
 
 **中文** · [English](en/TROUBLESHOOTING.md) · [文档索引](README.md)
 
-先跑这两条。项目已配置时，它们打印后端、运行环境状态和配置缺项；项目还没创建时只打印项目名和 `state: not-configured`。检查发现缺项时命令以非零状态退出。
+先跑这两条。项目已配置时，它们打印项目、后端和运行环境状态，运行环境在运行时再附上诊断报告；项目还没创建时只打印项目名和 `state: not-configured`。诊断发现缺项时命令以非零状态退出，这时打印的是 `Command failed` 错误，不是报告。
 
 ```sh
 layerfs-mcp status --project <name>

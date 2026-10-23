@@ -2,7 +2,7 @@
 
 [中文](../TROUBLESHOOTING.md) · **English** · [Docs index](README.md)
 
-Start with these two. Once the project is configured they print the backend, the runtime state and any configuration gaps. Before that they print only the project name and `state: not-configured`. When a check finds a gap, the command exits with a non-zero status.
+Start with these two. Once the project is configured they print the project, the backend and the runtime state, and add a diagnostics report while the runtime is running. Before that they print only the project name and `state: not-configured`. When diagnostics find a gap the command exits non-zero and prints a `Command failed` error instead of the report.
 
 ```sh
 layerfs-mcp status --project <name>
