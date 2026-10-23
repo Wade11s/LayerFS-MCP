@@ -17,7 +17,7 @@ layerfs-mcp doctor --project <name>
 
 **A call returns `RuntimePreparing`.** The runtime is not ready yet. The call is not queued and will not run later behind your back. Reissue it once the state is `ready`.
 
-**`status` passes but tool calls fail.** `status` and `doctor` run the same check. They read the project configuration and report the runtime state and any gaps, without opening the store or starting a sandbox. Passing configuration checks does not mean Docker, FUSE and the store have actually been exercised.
+**`status` passes but tool calls fail.** `status` and `doctor` run the same check. They read the project configuration and report the runtime state, without opening the store or starting a sandbox. Passing configuration checks does not mean Docker, FUSE and the store have actually been exercised.
 
 ## Import
 

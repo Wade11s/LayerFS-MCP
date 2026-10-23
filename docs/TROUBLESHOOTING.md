@@ -17,7 +17,7 @@ layerfs-mcp doctor --project <name>
 
 **调用直接返回 `RuntimePreparing`。** 运行环境还没就绪。这个错误不会排队、不会稍后偷偷执行，等 `ready` 后重新发起同一操作。
 
-**`status` 通过但工具调用失败。** `status` 与 `doctor` 走同一项检查：读取项目配置、报告运行环境状态和缺项，不打开 Store、不启动 Sandbox。配置检查通过 ≠ Docker、FUSE、Store 已实际运行验证。
+**`status` 通过但工具调用失败。** `status` 与 `doctor` 走同一项检查：读取项目配置、报告运行环境状态，不打开 Store、不启动 Sandbox。配置检查通过 ≠ Docker、FUSE、Store 已实际运行验证。
 
 ## 导入
 
