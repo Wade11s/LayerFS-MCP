@@ -89,11 +89,11 @@ Send requests to `http://127.0.0.1:8787/mcp` with `Authorization: Bearer $LAYERF
 ## 5. Confirm it works
 
 ```sh
-layerfs-mcp status --project website   # project, backend, state
-layerfs-mcp doctor --project website   # config gaps and native addon load
+layerfs-mcp status --project website   # project, backend, runtime state
+layerfs-mcp doctor --project website   # runs the same check as status today
 ```
 
-The CLI prints `state`. The MCP tool `layerfs_status` reports `runtimeState`, with the same values of `preparing`, `ready` and `failed`.
+The `state` that `status` prints is the runtime state, such as `running`, `stopped` or `not-configured`. Preparation progress lives in the `runtimeState` field of the MCP tool `layerfs_status`, with the values `preparing`, `ready` and `failed`.
 
 On the agent side, call `layerfs_status` first, then `layerfs_project_list_branches`. A returned `main` means the store is open and the import succeeded.
 

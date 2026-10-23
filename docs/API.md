@@ -90,7 +90,7 @@
 
 ## 桥接层状态、资源和提示词
 
-- `layerfs_status({})`：项目、平台、配置缺项、native 文件存在性、SDK 是否已加载、固定上游版本、当前启用的方法。它不会打开 Store 或启动 Sandbox。`doctor` CLI 额外尝试加载 native addon，但不打开 Store。配置检查通过不代表 Docker、FUSE、Store 均已运行验证。
+- `layerfs_status({})`：项目、平台、配置缺项、native 文件存在性、SDK 是否已加载、固定上游版本、当前启用的方法。它不会打开 Store 或启动 Sandbox。CLI 的 `status` 与 `doctor` 走同一项检查，同样不打开 Store。配置检查通过不代表 Docker、FUSE、Store 均已运行验证。
 - `layerfs://guide`：工作方式与错误处理说明。
 - `layerfs://capabilities`：当前配置下实际启用的方法映射。
 - `layerfs://branches`：分支的第一页；用 list_branches 工具继续分页。

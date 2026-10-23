@@ -13,11 +13,11 @@ layerfs-mcp doctor --project <name>
 
 **Stuck in `preparing`.** The first start builds an image and creates a runtime in the background. A cold start downloads the base image and Rust dependencies. Watch stderr. Build output goes there, and stdout stays reserved for MCP. When several agents start for the first time, image build and runtime creation are serialized by an inter-process lock, so the second client waits for the first.
 
-**`runtimeState=failed`.** The CLI `status` prints `state=failed`. The state carries the concrete error. Fix the environment and reconnect. Failed SDK operations are never retried automatically.
+**`runtimeState=failed`.** That field comes from the MCP tool `layerfs_status`. The state carries the concrete error. Fix the environment and reconnect. Failed SDK operations are never retried automatically.
 
 **A call returns `RuntimePreparing`.** The runtime is not ready yet. The call is not queued and will not run later behind your back. Reissue it once the state is `ready`.
 
-**`status` passes but tool calls fail.** `status` only checks configuration. It does not open the store or start a sandbox. `doctor` additionally tries to load the native addon, still without opening the store. Passing configuration checks does not mean Docker, FUSE and the store have actually been exercised.
+**`status` passes but tool calls fail.** `status` and `doctor` run the same check. They read the project configuration and report the runtime state and any gaps, without opening the store or starting a sandbox. Passing configuration checks does not mean Docker, FUSE and the store have actually been exercised.
 
 ## Import
 

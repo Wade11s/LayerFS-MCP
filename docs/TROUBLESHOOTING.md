@@ -13,11 +13,11 @@ layerfs-mcp doctor --project <name>
 
 **一直停在 `preparing`。** 首次启动要在后台构建镜像并创建运行环境，冷启动会下载基础镜像和 Rust 依赖。看服务 stderr（构建输出只写 stderr，stdout 留给 MCP）。多个 Agent 同时首次启动时，镜像构建和运行环境创建通过进程间锁串行执行，第二个客户端会等第一个完成。
 
-**`runtimeState=failed`（CLI `status` 显示为 `state=failed`）。** 状态里带有具体错误。修复环境后重新连接；服务不会自动重试失败的 SDK 操作。
+**`runtimeState=failed`。** 这个字段来自 MCP 工具 `layerfs_status`。状态里带有具体错误。修复环境后重新连接；服务不会自动重试失败的 SDK 操作。
 
 **调用直接返回 `RuntimePreparing`。** 运行环境还没就绪。这个错误不会排队、不会稍后偷偷执行，等 `ready` 后重新发起同一操作。
 
-**`status` 通过但工具调用失败。** `status` 只检查配置，不打开 Store、不启动 Sandbox；`doctor` 额外尝试加载 native addon，同样不打开 Store。配置检查通过 ≠ Docker、FUSE、Store 已实际运行验证。
+**`status` 通过但工具调用失败。** `status` 与 `doctor` 走同一项检查：读取项目配置、报告运行环境状态和缺项，不打开 Store、不启动 Sandbox。配置检查通过 ≠ Docker、FUSE、Store 已实际运行验证。
 
 ## 导入
 

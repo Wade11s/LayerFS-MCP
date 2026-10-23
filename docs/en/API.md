@@ -90,7 +90,7 @@ Enabled by default; disable with `--no-operator`. They come from the upstream `@
 
 ## Bridge state, resources and prompts
 
-- `layerfs_status({})`: project, platform, missing configuration, native file presence, whether the SDK is loaded, the pinned upstream version, and the currently enabled methods. It does not open the store or start a sandbox. The `doctor` CLI additionally attempts to load the native addon, still without opening the store. Passing configuration checks is not proof that Docker, FUSE and the store have been exercised.
+- `layerfs_status({})`: project, platform, missing configuration, native file presence, whether the SDK is loaded, the pinned upstream version, and the currently enabled methods. It does not open the store or start a sandbox. The CLI `status` and `doctor` commands run the same check and also leave the store closed. Passing configuration checks is not proof that Docker, FUSE and the store have been exercised.
 - `layerfs://guide`: how the service works and how errors behave.
 - `layerfs://capabilities`: the method map actually enabled under the current configuration.
 - `layerfs://branches`: the first page of branches; continue paging with the list_branches tool.
