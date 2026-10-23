@@ -47,7 +47,7 @@ layerfs-mcp update --project website --image docker.io/library/layerfs-mcp-apple
 
 | 变量 | 谁写入 | 谁读取 |
 | --- | --- | --- |
-| `LAYERFS_HOME` | 镜像入口、Apple boot 脚本 | 运行环境内的上游 SDK |
+| `LAYERFS_HOME` | `Dockerfile`、`apple/boot.mjs` | `docker/entrypoint.mjs` 与运行环境内的上游 SDK |
 | `LAYERFS_DOCKER` | `Dockerfile`、`apple/boot.mjs` | VM 内的 `apple/run.mjs` 与上游 SDK |
 | `LAYERFS_DAEMON_HOST` | `src/docker.ts`、`compose.yaml`、`apple/boot.mjs` | 运行环境内的上游 SDK |
 | `LAYERFS_CONTAINER_PREFIX` | `src/docker.ts`、`compose.yaml`、`apple/boot.mjs` | 运行环境内的上游 SDK |

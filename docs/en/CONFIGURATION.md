@@ -47,7 +47,7 @@ The deployment writes the next four variables into the runtime, where the upstre
 
 | Variable | Written by | Read by |
 | --- | --- | --- |
-| `LAYERFS_HOME` | The image entrypoint and the Apple boot script | The upstream SDK inside the runtime |
+| `LAYERFS_HOME` | `Dockerfile` and `apple/boot.mjs` | `docker/entrypoint.mjs` and the upstream SDK inside the runtime |
 | `LAYERFS_DOCKER` | `Dockerfile` and `apple/boot.mjs` | `apple/run.mjs` in the VM and the upstream SDK |
 | `LAYERFS_DAEMON_HOST` | `src/docker.ts`, `compose.yaml` and `apple/boot.mjs` | The upstream SDK inside the runtime |
 | `LAYERFS_CONTAINER_PREFIX` | `src/docker.ts`, `compose.yaml` and `apple/boot.mjs` | The upstream SDK inside the runtime |

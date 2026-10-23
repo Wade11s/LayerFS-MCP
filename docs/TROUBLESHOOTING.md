@@ -2,7 +2,7 @@
 
 **中文** · [English](en/TROUBLESHOOTING.md) · [文档索引](README.md)
 
-先跑这两条，它们会给出配置缺项和后端选择：
+先跑这两条。项目已配置时，它们打印后端、运行环境状态和配置缺项；项目还没创建时只打印项目名和 `state: not-configured`。检查发现缺项时命令以非零状态退出。
 
 ```sh
 layerfs-mcp status --project <name>
