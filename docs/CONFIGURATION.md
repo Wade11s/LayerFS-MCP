@@ -12,7 +12,7 @@
 ~/.config/layerfs-mcp/projects/<project>.json
 ```
 
-`serve`、`setup`、`init`、`status`、`doctor`、`stop` 读写同一份配置。首次选择后端的优先级是 `--backend`、`LAYERFS_MCP_BACKEND`、已有项目配置、平台默认值（macOS 为 Apple Container，其他平台为 Docker）。
+`serve`、`setup`、`init` 写这份配置，`status`、`doctor`、`stop` 读它。首次选择后端的优先级是 `--backend`、`LAYERFS_MCP_BACKEND`、已有项目配置、平台默认值（macOS 为 Apple Container，其他平台为 Docker）。
 
 已保存的镜像、source、VM 名称和资源参数发生变化时，命令会明确拒绝，而不是隐式替换。需要显式改写配置时：
 
@@ -34,9 +34,9 @@ layerfs-mcp update --project website --image docker.io/library/layerfs-mcp-apple
 | `LAYERFS_MCP_BACKEND` | `apple`、`docker` 或 `native`；优先使用 CLI 显式选择 |
 | `LAYERFS_MCP_CONFIG_DIR` | 托管项目配置目录，默认 `~/.config/layerfs-mcp` |
 | `LAYERFS_MCP_PROJECT` | 当前项目名，默认 `default` |
-| `LAYERFS_STORE_PATH` | Linux 本地 Store 路径；容器中为 `/layerfs-store/global/store.sqlite` |
+| `LAYERFS_STORE_PATH` | Linux 本地 Store 路径；Docker 镜像内为 `/layerfs-store/global/store.sqlite`，Apple 后端指向 VM 内 ext4 卷上的 `store.sqlite` |
 | `LAYERFS_NATIVE` | 可选 native addon 路径，默认由上游 SDK 选择 |
-| `LAYERFS_IMAGE` | 已存在于本地 Docker Engine 的不可变 `sha256:...` 镜像 ID |
+| `LAYERFS_IMAGE` | 已存在于本地引擎（Docker 或 Apple Container）的不可变 `sha256:...` 镜像 ID |
 | `LAYERFS_VOLUME` | Sandbox 与 MCP 共同使用的现有本地命名卷 |
 | `LAYERFS_DAEMON` | MCP 进程可读取的 Linux daemon 文件；SDK 会将其传入 Sandbox |
 | `LAYERFS_ENGINE` | 默认 `docker`；Apple runtime 自动设置 `podman` 并配置 VM 内兼容 socket |

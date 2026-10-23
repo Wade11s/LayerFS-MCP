@@ -12,7 +12,7 @@ Stored under `LAYERFS_MCP_CONFIG_DIR`, default `~/.config/layerfs-mcp`, one file
 ~/.config/layerfs-mcp/projects/<project>.json
 ```
 
-`serve`, `setup`, `init`, `status`, `doctor` and `stop` all read and write the same file. Backend selection on first use follows `--backend`, then `LAYERFS_MCP_BACKEND`, then a saved project file, then the platform default (Apple Container on macOS, Docker elsewhere).
+`serve`, `setup` and `init` write the file. `status`, `doctor` and `stop` read it. Backend selection on first use follows `--backend`, then `LAYERFS_MCP_BACKEND`, then a saved project file, then the platform default (Apple Container on macOS, Docker elsewhere).
 
 Saved image, source, VM name and resource settings that change are rejected rather than silently replaced. To rewrite them explicitly:
 
@@ -34,9 +34,9 @@ A project name cannot migrate its store across backends. Use a new project for a
 | `LAYERFS_MCP_BACKEND` | `apple`, `docker` or `native`; prefer selecting it explicitly on the CLI |
 | `LAYERFS_MCP_CONFIG_DIR` | Managed project config directory, default `~/.config/layerfs-mcp` |
 | `LAYERFS_MCP_PROJECT` | Current project name, default `default` |
-| `LAYERFS_STORE_PATH` | Linux-local store path; `/layerfs-store/global/store.sqlite` in containers |
+| `LAYERFS_STORE_PATH` | Linux-local store path; `/layerfs-store/global/store.sqlite` in the Docker image, and `store.sqlite` on the ext4 volume inside the VM for the Apple backend |
 | `LAYERFS_NATIVE` | Optional native addon path; the upstream SDK picks the default |
-| `LAYERFS_IMAGE` | Immutable local `sha256:...` image ID already present in the Docker engine |
+| `LAYERFS_IMAGE` | Immutable `sha256:...` image ID already present in the local engine, Docker or Apple Container |
 | `LAYERFS_VOLUME` | Existing local named volume shared by the sandbox and the MCP process |
 | `LAYERFS_DAEMON` | Linux daemon file readable by the MCP process; the SDK passes it into sandboxes |
 | `LAYERFS_ENGINE` | Defaults to `docker`; the Apple runtime sets `podman` and configures a compatible socket inside the VM |
