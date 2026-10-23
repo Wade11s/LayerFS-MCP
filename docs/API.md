@@ -1,5 +1,9 @@
 # MCP API
 
+**中文** · [English](en/API.md) · [文档索引](README.md)
+
+全部 41 个工具、3 个资源与 1 个工作流提示词的参考。工作流层面的约定见 [工作方式](HOW-IT-WORKS.md)。
+
 工具名将上游方法的 `.` 替换为 `_` 并添加 `layerfs_` 前缀。例如 `fs.read` 对应 `layerfs_fs_read`。每个工具是独立的标准 MCP tool，参数为 JSON 对象；没有通用任意方法执行入口。一个 MCP 服务实例绑定一个项目。
 
 所有工具成功时返回 `{ "result": <上游值> }`，同时存在于 `structuredContent` 和文本 content。失败时返回 `isError: true` 与 `{ "error": { "code", "message", "detail" } }`。MCP SDK 拒绝的无效参数也会返回工具错误，此时错误可能仅有文本 content。
@@ -86,7 +90,7 @@
 
 ## 桥接层状态、资源和提示词
 
-- `layerfs_status({})`：项目、平台、配置缺项、native 文件存在性、SDK 是否已加载、固定上游版本、当前启用的方法。它不会打开 Store 或启动 Sandbox。`doctor` CLI 额外尝试加载 native addon，但不打开 Store。配置检查通过不代表 Docker、FUSE、Store 均已运行验证。
+- `layerfs_status({})`：报告项目、`runtimeState` 和当前启用的方法（`capabilities`）。诊断字段随后端与运行环境状态变化，`ready` 之前较少，准备失败时带上 `error`。它不会打开 Store 或启动 Sandbox。CLI 的 `status` 与 `doctor` 走同一项检查，同样不打开 Store。配置检查通过不代表 Docker、FUSE、Store 均已运行验证。
 - `layerfs://guide`：工作方式与错误处理说明。
 - `layerfs://capabilities`：当前配置下实际启用的方法映射。
 - `layerfs://branches`：分支的第一页；用 list_branches 工具继续分页。

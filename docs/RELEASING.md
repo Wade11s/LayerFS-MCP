@@ -1,5 +1,7 @@
 # GitHub → npm 自动发布
 
+**中文** · [English](en/RELEASING.md) · [文档索引](README.md)
+
 GitHub 仓库：<https://github.com/Wade11s/LayerFS-MCP>。本地 `origin` 使用 `git@github.com:Wade11s/LayerFS-MCP.git`。
 
 `.github/workflows/publish.yml` 在推送 `main` 时运行，也支持从 Actions 手动重跑。只有 `package.json` 中尚未发布、且高于 npm `latest` 的稳定版本会发布，也支持从占位预发布版本升级。检查、测试与打包检查均通过后，使用 npm Trusted Publishing（OIDC）发布公开包并生成 provenance。发布任务使用 GitHub 托管 runner、Node 24、npm 11 和 `id-token: write`，不需要 `NPM_TOKEN`。
