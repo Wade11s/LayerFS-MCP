@@ -90,7 +90,7 @@
 
 ## 桥接层状态、资源和提示词
 
-- `layerfs_status({})`：始终返回当前启用的方法映射（`capabilities`）。运行环境 `ready` 时还返回项目、平台、配置缺项、native 文件存在性、SDK 是否已加载和固定上游版本。托管模式在 `ready` 之前返回项目、后端、固定上游版本、`runtimeState`、`stage` 和说明，准备失败时再带上 `error`。它不会打开 Store 或启动 Sandbox。CLI 的 `status` 与 `doctor` 走同一项检查，同样不打开 Store。配置检查通过不代表 Docker、FUSE、Store 均已运行验证。
+- `layerfs_status({})`：报告项目、`runtimeState` 和当前启用的方法（`capabilities`）。诊断字段随后端与运行环境状态变化，`ready` 之前较少，准备失败时带上 `error`。它不会打开 Store 或启动 Sandbox。CLI 的 `status` 与 `doctor` 走同一项检查，同样不打开 Store。配置检查通过不代表 Docker、FUSE、Store 均已运行验证。
 - `layerfs://guide`：工作方式与错误处理说明。
 - `layerfs://capabilities`：当前配置下实际启用的方法映射。
 - `layerfs://branches`：分支的第一页；用 list_branches 工具继续分页。

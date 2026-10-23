@@ -2,7 +2,7 @@
 
 [中文](../TROUBLESHOOTING.md) · **English** · [Docs index](README.md)
 
-Start with these two. Once the project is configured they print the project, the backend and the runtime state, and add a diagnostics report while the runtime is running. In managed mode an unconfigured project prints only the project name and `state: not-configured`. When diagnostics find a gap the command exits non-zero. Native mode prints the report first. Managed mode surfaces the inner check's error instead, so no report is printed.
+Start with these two. They report the project, the backend and the runtime state. The exact fields depend on the backend and on the runtime state, so read what the command prints. When diagnostics find a problem the command exits non-zero.
 
 ```sh
 layerfs-mcp status --project <name>

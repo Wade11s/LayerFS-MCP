@@ -90,7 +90,7 @@ Enabled by default; disable with `--no-operator`. They come from the upstream `@
 
 ## Bridge state, resources and prompts
 
-- `layerfs_status({})`: always returns the enabled method map (`capabilities`). When the runtime is `ready`, it also reports the project, platform, missing configuration, native file presence, whether the SDK is loaded and the pinned upstream version. Before `ready`, managed mode returns the project, backend, pinned upstream version, `runtimeState`, `stage` and a note, plus `error` when preparation failed. It does not open the store or start a sandbox. The CLI `status` and `doctor` commands run the same check and also leave the store closed. Passing configuration checks is not proof that Docker, FUSE and the store have been exercised.
+- `layerfs_status({})`: reports the project, `runtimeState` and the enabled method map (`capabilities`). The diagnostic fields depend on the backend and on the runtime state, are fewer before `ready`, and include `error` when preparation failed. It does not open the store or start a sandbox. The CLI `status` and `doctor` commands run the same check and also leave the store closed. Passing configuration checks is not proof that Docker, FUSE and the store have been exercised.
 - `layerfs://guide`: how the service works and how errors behave.
 - `layerfs://capabilities`: the method map actually enabled under the current configuration.
 - `layerfs://branches`: the first page of branches; continue paging with the list_branches tool.
