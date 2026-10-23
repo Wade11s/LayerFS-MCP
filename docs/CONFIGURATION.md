@@ -35,17 +35,24 @@ layerfs-mcp update --project website --image docker.io/library/layerfs-mcp-apple
 | `LAYERFS_MCP_CONFIG_DIR` | 托管项目配置目录，默认 `~/.config/layerfs-mcp` |
 | `LAYERFS_MCP_PROJECT` | 当前项目名，默认 `default` |
 | `LAYERFS_STORE_PATH` | Linux 本地 Store 路径；容器中为 `/layerfs-store/global/store.sqlite` |
-| `LAYERFS_HOME` | 上游私有发现目录，属当前用户且权限 0700 |
 | `LAYERFS_NATIVE` | 可选 native addon 路径，默认由上游 SDK 选择 |
 | `LAYERFS_IMAGE` | 已存在于本地 Docker Engine 的不可变 `sha256:...` 镜像 ID |
 | `LAYERFS_VOLUME` | Sandbox 与 MCP 共同使用的现有本地命名卷 |
 | `LAYERFS_DAEMON` | MCP 进程可读取的 Linux daemon 文件；SDK 会将其传入 Sandbox |
-| `LAYERFS_DOCKER` | 本地 Docker socket，默认 `/var/run/docker.sock` |
 | `LAYERFS_ENGINE` | 默认 `docker`；Apple runtime 自动设置 `podman` 并配置 VM 内兼容 socket |
-| `LAYERFS_DAEMON_HOST` | daemon 端口的访问地址；Linux host 网络用 `127.0.0.1`，Docker Desktop 容器用 `host.docker.internal` |
-| `LAYERFS_CONTAINER_PREFIX` | 同一引擎上区分部署的容器名前缀 |
 | `LAYERFS_MCP_STORE_POLICY` | 可选 JSON：`smallFileThreshold`、`wholeFileDepth`、`chunkDepth`、`metadataDepth`，仅在 Init 时写入 Store |
 | `LAYERFS_TRACE`, `LAYERFS_TRACE_STEP`, `LAYERFS_TRACE_START` | 上游调用追踪配置，原样传递 |
+
+以下几项由部署写入运行环境，供 VM 或容器内的上游 SDK 与适配器读取。在宿主机 MCP 进程的环境里设置它们不会改变运行环境的取值。
+
+| 变量 | 谁写入 | 谁读取 |
+| --- | --- | --- |
+| `LAYERFS_HOME` | 镜像入口、Apple boot 脚本 | 运行环境内的上游 SDK |
+| `LAYERFS_DOCKER` | `Dockerfile`、`apple/boot.mjs` | VM 内的 `apple/run.mjs` 与上游 SDK |
+| `LAYERFS_DAEMON_HOST` | `src/docker.ts`、`compose.yaml`、`apple/boot.mjs` | 运行环境内的上游 SDK |
+| `LAYERFS_CONTAINER_PREFIX` | `src/docker.ts`、`compose.yaml`、`apple/boot.mjs` | 运行环境内的上游 SDK |
+
+要换 daemon 地址或容器前缀，请改对应的后端配置或 Compose 文件。
 
 ### 传输与访问控制
 

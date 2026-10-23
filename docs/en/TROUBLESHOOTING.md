@@ -13,7 +13,7 @@ layerfs-mcp doctor --project <name>
 
 **Stuck in `preparing`.** The first start builds an image and creates a runtime in the background. A cold start downloads the base image and Rust dependencies. Watch stderr. Build output goes there, and stdout stays reserved for MCP. When several agents start for the first time, image build and runtime creation are serialized by an inter-process lock, so the second client waits for the first.
 
-**`runtimeState=failed`.** The state carries the concrete error. Fix the environment and reconnect. Failed SDK operations are never retried automatically.
+**`runtimeState=failed`.** The CLI `status` prints `state=failed`. The state carries the concrete error. Fix the environment and reconnect. Failed SDK operations are never retried automatically.
 
 **A call returns `RuntimePreparing`.** The runtime is not ready yet. The call is not queued and will not run later behind your back. Reissue it once the state is `ready`.
 

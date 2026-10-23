@@ -35,17 +35,24 @@ A project name cannot migrate its store across backends. Use a new project for a
 | `LAYERFS_MCP_CONFIG_DIR` | Managed project config directory, default `~/.config/layerfs-mcp` |
 | `LAYERFS_MCP_PROJECT` | Current project name, default `default` |
 | `LAYERFS_STORE_PATH` | Linux-local store path; `/layerfs-store/global/store.sqlite` in containers |
-| `LAYERFS_HOME` | Upstream private discovery directory, owned by the current user, mode 0700 |
 | `LAYERFS_NATIVE` | Optional native addon path; the upstream SDK picks the default |
 | `LAYERFS_IMAGE` | Immutable local `sha256:...` image ID already present in the Docker engine |
 | `LAYERFS_VOLUME` | Existing local named volume shared by the sandbox and the MCP process |
 | `LAYERFS_DAEMON` | Linux daemon file readable by the MCP process; the SDK passes it into sandboxes |
-| `LAYERFS_DOCKER` | Local Docker socket, default `/var/run/docker.sock` |
 | `LAYERFS_ENGINE` | Defaults to `docker`; the Apple runtime sets `podman` and configures a compatible socket inside the VM |
-| `LAYERFS_DAEMON_HOST` | Address used to reach the daemon port; `127.0.0.1` on Linux host networking, `host.docker.internal` from Docker Desktop containers |
-| `LAYERFS_CONTAINER_PREFIX` | Container name prefix that distinguishes deployments on one engine |
 | `LAYERFS_MCP_STORE_POLICY` | Optional JSON: `smallFileThreshold`, `wholeFileDepth`, `chunkDepth`, `metadataDepth`; written to the store only at Init |
 | `LAYERFS_TRACE`, `LAYERFS_TRACE_STEP`, `LAYERFS_TRACE_START` | Upstream call tracing, passed through unchanged |
+
+The deployment writes the next four variables into the runtime, where the upstream SDK and adapters inside the VM or container read them. Setting them on the host MCP process does not change the runtime's values.
+
+| Variable | Written by | Read by |
+| --- | --- | --- |
+| `LAYERFS_HOME` | The image entrypoint and the Apple boot script | The upstream SDK inside the runtime |
+| `LAYERFS_DOCKER` | `Dockerfile` and `apple/boot.mjs` | `apple/run.mjs` in the VM and the upstream SDK |
+| `LAYERFS_DAEMON_HOST` | `src/docker.ts`, `compose.yaml` and `apple/boot.mjs` | The upstream SDK inside the runtime |
+| `LAYERFS_CONTAINER_PREFIX` | `src/docker.ts`, `compose.yaml` and `apple/boot.mjs` | The upstream SDK inside the runtime |
+
+To change the daemon address or the container prefix, change the backend setting or the Compose file.
 
 ### Transport and access control
 

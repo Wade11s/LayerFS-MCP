@@ -89,9 +89,11 @@ layerfs-mcp serve --project website --transport http --host 127.0.0.1 --port 878
 ## 5. 确认可用
 
 ```sh
-layerfs-mcp status --project website   # 项目、后端、runtimeState
+layerfs-mcp status --project website   # 项目、后端、state
 layerfs-mcp doctor --project website   # 配置缺项与 native addon 加载情况
 ```
+
+`status` 打印的字段是 `state`。MCP 工具 `layerfs_status` 报的是 `runtimeState`，取值同为 `preparing`、`ready`、`failed`。
 
 Agent 侧的第一次调用建议是 `layerfs_status`，然后 `layerfs_project_list_branches`——返回 `main` 说明 Store 已打开且导入成功。
 
